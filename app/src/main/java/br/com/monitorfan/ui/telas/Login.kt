@@ -52,7 +52,7 @@ import br.com.monitorfan.ui.theme.WhiteSoft
 @Composable
 fun Login(
     onLoginClick: (String, String) -> Unit = { _, _ -> },
-    onRegisterClick: () -> Unit = {},
+    onCadastroClick: () -> Unit = {},
     onForgotPasswordClick: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
@@ -193,7 +193,7 @@ fun Login(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            RowTextRegister(onRegisterClick)
+            RowTextRegister(onCadastroClick)
         }
     }
 }
