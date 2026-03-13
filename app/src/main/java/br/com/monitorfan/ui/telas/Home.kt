@@ -29,15 +29,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val BluePrimary = Color(0xFF303C60)
-private val BlueDark = Color(0xFF1F2942)
-private val CardColor = Color(0xFF24314F)
-private val FieldColor = Color(0xFF2A3656)
-private val OrangePrimary = Color(0xFFF17535)
-private val WhiteSoft = Color(0xFFF5F7FA)
-private val GrayText = Color(0xFFB8C1D1)
-private val BorderSoft = Color(0xFF415173)
+import br.com.monitorfan.ui.theme.BlueDark
+import br.com.monitorfan.ui.theme.BluePrimary
+import br.com.monitorfan.ui.theme.BorderSoft
+import br.com.monitorfan.ui.theme.CardColor
+import br.com.monitorfan.ui.theme.FieldColor
+import br.com.monitorfan.ui.theme.GrayText
+import br.com.monitorfan.ui.theme.OrangePrimary
+import br.com.monitorfan.ui.theme.WhiteSoft
 
 data class Monitoria(
     val nome: String,
