@@ -1,32 +1,40 @@
-package br.com.monitorfan.ui.telas
+package com.example.appexemplo.ui.telas
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.monitorfan.ui.theme.BlueDark
@@ -38,6 +46,7 @@ import br.com.monitorfan.ui.theme.GrayText
 import br.com.monitorfan.ui.theme.OrangePrimary
 import br.com.monitorfan.ui.theme.WhiteSoft
 
+
 data class Monitoria(
     val nome: String,
     val disciplina: String,
@@ -47,7 +56,7 @@ data class Monitoria(
 )
 
 @Composable
-fun Home() {
+fun HomeScreen() {
     val cursos = listOf("Todos", "Computação", "Engenharia", "Matemática")
     val monitorias = listOf(
         Monitoria("Ana Martins", "Cálculo I", "Computação", "Hoje 14h"),
@@ -55,8 +64,6 @@ fun Home() {
         Monitoria("Julia Santos", "Física II", "Engenharia", "Qua 16h"),
         Monitoria("Pedro Lima", "Álgebra Linear", "Matemática", "Hoje 16h")
     )
-
-    val selectedTab by remember { mutableStateOf(0) }
 
     Box(
         modifier = Modifier
@@ -132,16 +139,10 @@ fun Home() {
 
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
-                    FeedPreviewCard()
-                    Spacer(modifier = Modifier.height(80.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
-
-        BottomNavBar(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            selectedIndex = selectedTab
-        )
     }
 }
 
@@ -154,7 +155,7 @@ fun SearchField() {
         placeholder = {
             Text(
                 text = "Buscar disciplina ou monitor...",
-                color = GrayText
+                color = GrayText.copy(alpha = 0.9f)
             )
         },
         leadingIcon = {
@@ -171,10 +172,12 @@ fun SearchField() {
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = FieldColor,
             unfocusedContainerColor = FieldColor,
-            focusedBorderColor = BorderSoft,
-            unfocusedBorderColor = BorderSoft,
+            focusedBorderColor = Color.Transparent,
+            unfocusedBorderColor = Color.Transparent,
             focusedTextColor = WhiteSoft,
             unfocusedTextColor = WhiteSoft,
+            focusedPlaceholderColor = GrayText,
+            unfocusedPlaceholderColor = GrayText,
             cursorColor = OrangePrimary
         )
     )
@@ -185,7 +188,7 @@ fun SectionTitle(title: String) {
     Text(
         text = title,
         color = GrayText,
-        fontSize = 16.sp,
+        fontSize = 15.sp,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 2.sp
     )
@@ -199,13 +202,13 @@ fun CourseChip(
     Surface(
         shape = RoundedCornerShape(50),
         color = if (selected) OrangePrimary else FieldColor,
-        border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, BorderSoft),
+        border = null,
         modifier = Modifier.clickable { }
     ) {
         Text(
             text = text,
             color = if (selected) Color.White else GrayText,
-            fontSize = 18.sp,
+            fontSize = 17.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp)
         )
@@ -214,15 +217,35 @@ fun CourseChip(
 
 @Composable
 fun MonitoriaCard(item: Monitoria) {
-    val borderColor = if (item.destaque) OrangePrimary else BorderSoft
-    val badgeColor = if (item.destaque) OrangePrimary.copy(alpha = 0.18f) else BluePrimary
-    val badgeTextColor = if (item.destaque) OrangePrimary else WhiteSoft
+    val borderColor = if (item.destaque) {
+        OrangePrimary.copy(alpha = 0.85f)
+    } else {
+        BorderSoft.copy(alpha = 0.40f)
+    }
+
+    val badgeColor = if (item.destaque) {
+        OrangePrimary.copy(alpha = 0.20f)
+    } else {
+        FieldColor
+    }
+
+    val badgeTextColor = if (item.destaque) {
+        OrangePrimary
+    } else {
+        WhiteSoft
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(24.dp)),
-        colors = CardDefaults.cardColors(containerColor = CardColor),
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(24.dp)
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = CardColor
+        ),
         shape = RoundedCornerShape(24.dp)
     ) {
         Row(
@@ -261,7 +284,9 @@ fun MonitoriaCard(item: Monitoria) {
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
+
                 Spacer(modifier = Modifier.height(4.dp))
+
                 Text(
                     text = "${item.disciplina} · ${item.curso}",
                     color = GrayText,
@@ -285,69 +310,14 @@ fun MonitoriaCard(item: Monitoria) {
     }
 }
 
-@Composable
-fun FeedPreviewCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardColor),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp)
-        ) {
-            Text(
-                text = "FEED DE DÚVIDAS",
-                color = GrayText,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 2.sp
-            )
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text(
-                text = "Publique dúvidas sobre disciplinas e receba respostas de monitores e outros alunos.",
-                color = WhiteSoft,
-                fontSize = 15.sp,
-                lineHeight = 22.sp
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                SuggestionChip("Cálculo")
-                SuggestionChip("Algoritmos")
-                SuggestionChip("Física")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = OrangePrimary,
-                    contentColor = Color.White
-                )
-            ) {
-                Text(
-                    text = "Abrir feed",
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun SuggestionChip(text: String) {
     Surface(
         shape = RoundedCornerShape(50),
         color = FieldColor,
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSoft)
+        border = null
     ) {
         Text(
             text = text,
@@ -357,68 +327,11 @@ fun SuggestionChip(text: String) {
     }
 }
 
-@Composable
-fun BottomNavBar(
-    modifier: Modifier = Modifier,
-    selectedIndex: Int = 0
-) {
-    val items = listOf("Início", "Horários", "Feed", "Perfil")
-    val icons = listOf(
-        Icons.Default.Home,
-        Icons.Default.CalendarMonth,
-        Icons.Default.ChatBubbleOutline,
-        Icons.Default.Person
-    )
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        shape = RoundedCornerShape(26.dp),
-        color = BlueDark,
-        tonalElevation = 8.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            items.forEachIndexed { index, item ->
-                val selected = index == selectedIndex
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { }
-                ) {
-                    Icon(
-                        imageVector = icons[index],
-                        contentDescription = item,
-                        tint = if (selected) OrangePrimary else GrayText
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = item,
-                        color = if (selected) OrangePrimary else GrayText,
-                        fontSize = 13.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                    )
-                }
-            }
-        }
-    }
-}
-
 fun initials(nome: String): String {
-    val parts = nome.trim().split(" ")
+    val parts = nome.trim().split(" ").filter { it.isNotBlank() }
     return when {
         parts.isEmpty() -> ""
         parts.size == 1 -> parts[0].take(2).uppercase()
         else -> (parts[0].take(1) + parts[1].take(1)).uppercase()
     }
-}
-
-@Preview
-@Composable
-fun HomePreview() {
-    Home()
 }

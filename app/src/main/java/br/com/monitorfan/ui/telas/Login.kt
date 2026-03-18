@@ -1,4 +1,4 @@
-package br.com.monitorfan.ui.telas
+package com.example.appexemplo.ui.telas
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -20,7 +20,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -38,11 +37,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.monitorfan.ui.theme.BlueDark
 import br.com.monitorfan.ui.theme.BluePrimary
+import br.com.monitorfan.ui.theme.BorderSoft
 import br.com.monitorfan.ui.theme.FieldColor
 import br.com.monitorfan.ui.theme.GrayText
 import br.com.monitorfan.ui.theme.OrangePrimary
@@ -50,10 +49,9 @@ import br.com.monitorfan.ui.theme.WhiteSoft
 
 
 @Composable
-fun Login(
-    onLoginClick: (String, String) -> Unit = { _, _ -> },
-    onCadastroClick: () -> Unit = {},
-    onForgotPasswordClick: () -> Unit = {}
+fun LoginScreen(
+    onEntrarClick: () -> Unit = {},
+    onCriarContaClick: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
@@ -63,34 +61,33 @@ fun Login(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(BlueDark, BluePrimary, BlueDark)
+                Brush.verticalGradient(
+                    listOf(BlueDark, BluePrimary, BlueDark)
                 )
             )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 28.dp, vertical = 100.dp),
+                .padding(horizontal = 28.dp, vertical = 60.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Row() {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row {
                 Text(
                     text = "Monitor",
                     color = WhiteSoft,
-                    fontSize = 28.sp,
+                    fontSize = 30.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
-
                 Text(
                     text = "Fan",
                     color = OrangePrimary,
-                    fontSize = 28.sp,
+                    fontSize = 30.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
-
-
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -98,21 +95,17 @@ fun Login(
             Text(
                 text = "Bem vindo(a)",
                 color = GrayText,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium
+                fontSize = 20.sp
             )
 
-            Spacer(modifier = Modifier.height(34.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("E-mail") },
                 leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Email,
-                        contentDescription = null
-                    )
+                    Icon(Icons.Default.Email, contentDescription = null)
                 },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
@@ -127,30 +120,19 @@ fun Login(
                 onValueChange = { senha = it },
                 label = { Text("Senha") },
                 leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null
-                    )
+                    Icon(Icons.Default.Lock, contentDescription = null)
                 },
                 trailingIcon = {
                     IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
                         Icon(
-                            imageVector = if (senhaVisivel) {
-                                Icons.Default.VisibilityOff
-                            } else {
-                                Icons.Default.Visibility
-                            },
+                            imageVector = if (senhaVisivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = null,
                             tint = GrayText
                         )
                     }
                 },
                 singleLine = true,
-                visualTransformation = if (senhaVisivel) {
-                    VisualTransformation.None
-                } else {
-                    PasswordVisualTransformation()
-                },
+                visualTransformation = if (senhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
                 colors = loginTextFieldColors()
@@ -159,7 +141,7 @@ fun Login(
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(
-                onClick = onForgotPasswordClick,
+                onClick = {},
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Text(
@@ -172,7 +154,7 @@ fun Login(
             Spacer(modifier = Modifier.height(18.dp))
 
             Button(
-                onClick = { onLoginClick(email, senha) },
+                onClick = onEntrarClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -189,29 +171,22 @@ fun Login(
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-
             Spacer(modifier = Modifier.weight(1f))
 
-            RowTextRegister(onCadastroClick)
+            TextButton(onClick = onCriarContaClick) {
+                Text(
+                    text = "Não tem conta? ",
+                    color = GrayText,
+                    fontSize = 15.sp
+                )
+                Text(
+                    text = "Criar uma",
+                    color = OrangePrimary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
-    }
-}
-
-@Composable
-fun RowTextRegister(onRegisterClick: () -> Unit) {
-    TextButton(onClick = onRegisterClick) {
-        Text(
-            text = "Não tem conta? ",
-            color = GrayText,
-            fontSize = 15.sp
-        )
-        Text(
-            text = "Criar uma",
-            color = OrangePrimary,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 
@@ -220,8 +195,8 @@ fun loginTextFieldColors(): TextFieldColors {
     return OutlinedTextFieldDefaults.colors(
         focusedContainerColor = FieldColor,
         unfocusedContainerColor = FieldColor,
-        focusedBorderColor = WhiteSoft,
-        unfocusedBorderColor = WhiteSoft,
+        focusedBorderColor = BorderSoft,
+        unfocusedBorderColor = BorderSoft,
         focusedTextColor = WhiteSoft,
         unfocusedTextColor = WhiteSoft,
         focusedLabelColor = GrayText,
@@ -232,12 +207,4 @@ fun loginTextFieldColors(): TextFieldColors {
         unfocusedTrailingIconColor = GrayText,
         cursorColor = OrangePrimary
     )
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun LoginScreenPreview() {
-    MaterialTheme {
-        Login()
-    }
 }

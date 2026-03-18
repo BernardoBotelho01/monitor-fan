@@ -1,4 +1,4 @@
-package br.com.monitorfan.ui.telas
+package com.example.appexemplo.ui.telas
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,7 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.monitorfan.ui.theme.BlueDark
@@ -56,108 +55,11 @@ import br.com.monitorfan.ui.theme.GrayText
 import br.com.monitorfan.ui.theme.OrangePrimary
 import br.com.monitorfan.ui.theme.WhiteSoft
 
-@Composable
-fun CampoPeriodo(
-    value: String,
-    expandido: Boolean,
-    onClick: () -> Unit
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = {},
-        readOnly = true,
-        label = { Text("Período") },
-        leadingIcon = {
-            Icon(Icons.Default.Schedule, contentDescription = null)
-        },
-        trailingIcon = {
-            Icon(
-                imageVector = Icons.Default.ArrowDropDown,
-                contentDescription = null,
-                tint = if (expandido) OrangePrimary else GrayText
-            )
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        colors = textFieldColors()
-    )
-}
 
 @Composable
-fun MenuPeriodo(
-    expandido: Boolean,
-    onDismissRequest: () -> Unit,
-    onPeriodoSelecionado: (String) -> Unit
-) {
-    val periodos = listOf(
-        "1º Período",
-        "2º Período",
-        "3º Período",
-        "4º Período",
-        "5º Período",
-        "6º Período",
-        "7º Período",
-        "8º Período",
-        "9º Período",
-        "10º Período"
-    )
-
-    DropdownMenu(
-        expanded = expandido,
-        onDismissRequest = onDismissRequest
-    ) {
-        periodos.forEach { periodo ->
-            DropdownMenuItem(
-                text = { Text(periodo) },
-                onClick = {
-                    onPeriodoSelecionado(periodo)
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun PeriodoDropdown(
-    value: String,
-    onValueChange: (String) -> Unit
-) {
-    var expandido by remember { mutableStateOf(false) }
-
-    Box(modifier = Modifier.fillMaxWidth()) {
-        CampoPeriodo(
-            value = value,
-            expandido = expandido,
-            onClick = { expandido = true }
-        )
-
-        MenuPeriodo(
-            expandido = expandido,
-            onDismissRequest = { expandido = false },
-            onPeriodoSelecionado = { periodoSelecionado ->
-                onValueChange(periodoSelecionado)
-                expandido = false
-            }
-        )
-    }
-}
-
-@Composable
-fun Cadastro(
-    onRegisterClick: (
-        nome: String,
-        curso: String,
-        matricula: String,
-        periodo: String,
-        email: String,
-        senha: String,
-        confirmarSenha: String,
-        anoConclusao: String
-    ) -> Unit = { _, _, _, _, _, _, _, _ -> },
-    onBackToLoginClick: () -> Unit = {}
+fun CadastroScreen(
+    onCadastrarClick: () -> Unit = {},
+    onVoltarLoginClick: () -> Unit = {}
 ) {
     var nome by remember { mutableStateOf("") }
     var curso by remember { mutableStateOf("") }
@@ -170,14 +72,18 @@ fun Cadastro(
 
     var senhaVisivel by remember { mutableStateOf(false) }
     var confirmarSenhaVisivel by remember { mutableStateOf(false) }
+    var expandido by remember { mutableStateOf(false) }
+
+    val periodos = listOf(
+        "1º Período", "2º Período", "3º Período", "4º Período", "5º Período",
+        "6º Período", "7º Período", "8º Período", "9º Período", "10º Período"
+    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(BlueDark, BluePrimary)
-                )
+                Brush.verticalGradient(listOf(BlueDark, BluePrimary))
             )
     ) {
         Column(
@@ -233,10 +139,45 @@ fun Cadastro(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            PeriodoDropdown(
-                value = periodo,
-                onValueChange = { periodo = it }
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = periodo,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Período") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Schedule, contentDescription = null)
+                    },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            tint = GrayText
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { expandido = true },
+                    colors = textFieldColors()
+                )
+
+                DropdownMenu(
+                    expanded = expandido,
+                    onDismissRequest = { expandido = false }
+                ) {
+                    periodos.forEach { item ->
+                        DropdownMenuItem(
+                            text = { Text(item) },
+                            onClick = {
+                                periodo = item
+                                expandido = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -253,30 +194,17 @@ fun Cadastro(
                 value = senha,
                 onValueChange = { senha = it },
                 label = { Text("Senha") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null
-                    )
-                },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
                         Icon(
-                            imageVector = if (senhaVisivel) {
-                                Icons.Default.VisibilityOff
-                            } else {
-                                Icons.Default.Visibility
-                            },
+                            imageVector = if (senhaVisivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = null,
                             tint = GrayText
                         )
                     }
                 },
-                visualTransformation = if (senhaVisivel) {
-                    VisualTransformation.None
-                } else {
-                    PasswordVisualTransformation()
-                },
+                visualTransformation = if (senhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -289,30 +217,17 @@ fun Cadastro(
                 value = confirmarSenha,
                 onValueChange = { confirmarSenha = it },
                 label = { Text("Confirmar senha") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null
-                    )
-                },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { confirmarSenhaVisivel = !confirmarSenhaVisivel }) {
                         Icon(
-                            imageVector = if (confirmarSenhaVisivel) {
-                                Icons.Default.VisibilityOff
-                            } else {
-                                Icons.Default.Visibility
-                            },
+                            imageVector = if (confirmarSenhaVisivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = null,
                             tint = GrayText
                         )
                     }
                 },
-                visualTransformation = if (confirmarSenhaVisivel) {
-                    VisualTransformation.None
-                } else {
-                    PasswordVisualTransformation()
-                },
+                visualTransformation = if (confirmarSenhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -331,18 +246,7 @@ fun Cadastro(
             Spacer(modifier = Modifier.height(28.dp))
 
             Button(
-                onClick = {
-                    onRegisterClick(
-                        nome,
-                        curso,
-                        matricula,
-                        periodo,
-                        email,
-                        senha,
-                        confirmarSenha,
-                        anoConclusao
-                    )
-                },
+                onClick = onCadastrarClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -361,7 +265,7 @@ fun Cadastro(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            TextButton(onClick = onBackToLoginClick) {
+            TextButton(onClick = onVoltarLoginClick) {
                 Text(
                     text = "Já tem conta? Entrar",
                     color = OrangePrimary,
@@ -408,10 +312,4 @@ fun textFieldColors(): TextFieldColors {
         unfocusedLeadingIconColor = GrayText,
         cursorColor = OrangePrimary
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun CadastroPreview() {
-    Cadastro()
 }
