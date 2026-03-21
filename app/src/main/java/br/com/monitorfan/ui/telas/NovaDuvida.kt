@@ -50,7 +50,7 @@ import br.com.monitorfan.ui.theme.OrangePrimary
 import br.com.monitorfan.ui.theme.WhiteSoft
 
 @Composable
-fun NovaDuvida(
+fun TelaNovaDuvida(
     onBackClick: () -> Unit = {},
     onPublishClick: (String, String, String) -> Unit = { _, _, _ -> }
 ) {

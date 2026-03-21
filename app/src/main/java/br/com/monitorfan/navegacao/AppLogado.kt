@@ -1,8 +1,8 @@
 package br.com.monitorfan.navegacao
 
-import com.example.appexemplo.ui.telas.FeedScreen
-import com.example.appexemplo.ui.telas.HomeScreen
-import com.example.appexemplo.ui.telas.ProfileScreen
+import com.example.appexemplo.ui.telas.TelaFeedDuvida
+import com.example.appexemplo.ui.telas.TelaHome
+import com.example.appexemplo.ui.telas.TelaPerfil
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import br.com.monitorfan.ui.telas.NovaDuvida
+import br.com.monitorfan.ui.telas.TelaNovaDuvida
 
 class BottomAppBarItem(
     val icon: ImageVector,
@@ -128,12 +128,12 @@ fun AppMonitorFanLogado(
 
             when (screens[page]) {
                 ScreenItem.Home -> {
-                    HomeScreen()
+                    TelaHome()
                 }
 
                 ScreenItem.Feed -> {
                     if (mostrarNovaDuvida) {
-                        NovaDuvida(
+                        TelaNovaDuvida(
                             onBackClick = {
                                 mostrarNovaDuvida = false
                             },
@@ -142,7 +142,7 @@ fun AppMonitorFanLogado(
                             }
                         )
                     } else {
-                        FeedScreen(
+                        TelaFeedDuvida(
                             onNovaDuvidaClick = {
                                 mostrarNovaDuvida = true
                             }
@@ -151,7 +151,7 @@ fun AppMonitorFanLogado(
                 }
 
                 ScreenItem.Perfil -> {
-                    ProfileScreen(
+                    TelaPerfil(
                         onLogout = onLogout
                     )
                 }

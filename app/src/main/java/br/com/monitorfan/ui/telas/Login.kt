@@ -49,7 +49,7 @@ import br.com.monitorfan.ui.theme.WhiteSoft
 
 
 @Composable
-fun LoginScreen(
+fun TelaLogin(
     onEntrarClick: () -> Unit = {},
     onCriarContaClick: () -> Unit = {}
 ) {

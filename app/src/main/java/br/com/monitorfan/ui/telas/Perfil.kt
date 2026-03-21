@@ -39,7 +39,7 @@ import br.com.monitorfan.ui.theme.OrangePrimary
 import br.com.monitorfan.ui.theme.WhiteSoft
 
 @Composable
-fun ProfileScreen(
+fun TelaPerfil(
     onLogout: () -> Unit = {}
 ) {
     Box(

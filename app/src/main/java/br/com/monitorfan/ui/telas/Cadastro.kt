@@ -57,7 +57,7 @@ import br.com.monitorfan.ui.theme.WhiteSoft
 
 
 @Composable
-fun CadastroScreen(
+fun TelaCadastro(
     onCadastrarClick: () -> Unit = {},
     onVoltarLoginClick: () -> Unit = {}
 ) {

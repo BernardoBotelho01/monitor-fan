@@ -56,7 +56,7 @@ data class Monitoria(
 )
 
 @Composable
-fun HomeScreen() {
+fun TelaHome() {
     val cursos = listOf("Todos", "Computação", "Engenharia", "Matemática")
     val monitorias = listOf(
         Monitoria("Ana Martins", "Cálculo I", "Computação", "Hoje 14h"),

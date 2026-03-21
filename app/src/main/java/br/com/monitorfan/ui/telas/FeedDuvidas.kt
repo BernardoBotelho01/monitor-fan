@@ -60,7 +60,7 @@ data class PostDuvida(
 )
 
 @Composable
-fun FeedScreen(
+fun TelaFeedDuvida(
     onNovaDuvidaClick: () -> Unit = {}
 ) {
     val categorias = listOf("Todas", "Cálculo", "Algoritmos", "Física")

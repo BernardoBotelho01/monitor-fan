@@ -10,8 +10,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import br.com.monitorfan.navegacao.AppMonitorFanLogado
-import com.example.appexemplo.ui.telas.CadastroScreen
-import com.example.appexemplo.ui.telas.LoginScreen
+import com.example.appexemplo.ui.telas.TelaCadastro
+import com.example.appexemplo.ui.telas.TelaLogin
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,7 +30,7 @@ fun MonitorFan() {
 
     when {
         !usuarioLogado && telaAtual == "login" -> {
-            LoginScreen(
+            TelaLogin(
                 onEntrarClick = {
                     usuarioLogado = true
                 },
@@ -41,7 +41,7 @@ fun MonitorFan() {
         }
 
         !usuarioLogado && telaAtual == "cadastro" -> {
-            CadastroScreen(
+            TelaCadastro(
                 onCadastrarClick = {
                     telaAtual = "login"
                 },
