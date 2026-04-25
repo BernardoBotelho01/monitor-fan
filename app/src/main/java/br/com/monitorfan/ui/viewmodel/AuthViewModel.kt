@@ -1,6 +1,8 @@
 package br.com.monitorfan.ui.viewmodel
 
+import android.app.Application
 import android.content.Context
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -11,6 +13,8 @@ import br.com.monitorfan.data.repository.MonitorFanRepository
 import br.com.monitorfan.dados.Cargo
 import br.com.monitorfan.dados.Repositorio
 import br.com.monitorfan.dados.Usuario
+import br.com.monitorfan.util.SenhaUtils
+import br.com.monitorfan.util.SessaoPrefs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,7 +41,10 @@ sealed class RedefinirSenhaState {
     data class Erro(val mensagem: String) : RedefinirSenhaState()
 }
 
-class AuthViewModel(private val repository: MonitorFanRepository) : ViewModel() {
+class AuthViewModel(
+    application: Application,
+    private val repository: MonitorFanRepository
+) : AndroidViewModel(application) {
 
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Ocioso)
     val loginState: StateFlow<LoginState> = _loginState.asStateFlow()
@@ -59,6 +66,7 @@ class AuthViewModel(private val repository: MonitorFanRepository) : ViewModel() 
             if (usuario == null) {
                 _loginState.value = LoginState.Erro("E-mail ou senha inválidos.")
             } else {
+                SessaoPrefs.salvar(getApplication(), usuario.id)
                 Repositorio.usuarioLogado.value = usuario
                 _loginState.value = LoginState.Sucesso(usuario)
             }
@@ -88,7 +96,7 @@ class AuthViewModel(private val repository: MonitorFanRepository) : ViewModel() 
                 UsuarioEntity(
                     nome = nome.trim(),
                     email = email.trim().lowercase(),
-                    senha = senha,
+                    senha = SenhaUtils.hashear(senha),
                     curso = curso,
                     matricula = matricula.trim(),
                     cargo = Cargo.USUARIO.name
@@ -99,6 +107,7 @@ class AuthViewModel(private val repository: MonitorFanRepository) : ViewModel() 
     }
 
     fun logout() {
+        SessaoPrefs.limpar(getApplication())
         Repositorio.encerrarSessao()
         _loginState.value = LoginState.Ocioso
     }
@@ -144,6 +153,7 @@ class AuthViewModel(private val repository: MonitorFanRepository) : ViewModel() 
 
 class AuthViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        val app = context.applicationContext as Application
         val db = AppDatabase.getInstance(context)
         val repo = MonitorFanRepository(
             usuarioDao = db.usuarioDao(),
@@ -153,6 +163,6 @@ class AuthViewModelFactory(private val context: Context) : ViewModelProvider.Fac
             apiService = RetrofitClient.apiService
         )
         @Suppress("UNCHECKED_CAST")
-        return AuthViewModel(repo) as T
+        return AuthViewModel(app, repo) as T
     }
 }

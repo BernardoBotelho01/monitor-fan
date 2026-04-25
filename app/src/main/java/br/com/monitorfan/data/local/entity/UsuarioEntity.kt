@@ -10,9 +10,7 @@ data class UsuarioEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val nome: String,
     val email: String,
-    // AVISO: Em produção, NUNCA armazene senha em texto puro.
-    // Use autenticação via token (JWT) com backend real e HTTPS.
-    val senha: String,
+    val senha: String, // armazenado como hash PBKDF2 via SenhaUtils
     val curso: String,
     val matricula: String,
     val cargo: String,

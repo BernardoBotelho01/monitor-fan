@@ -1,5 +1,6 @@
 package br.com.monitorfan.data.repository
 
+import br.com.monitorfan.BuildConfig
 import br.com.monitorfan.data.local.dao.DuvidaDao
 import br.com.monitorfan.data.local.dao.MonitoriaDao
 import br.com.monitorfan.data.local.dao.RespostaDao
@@ -15,6 +16,7 @@ import br.com.monitorfan.dados.Cargo
 import br.com.monitorfan.dados.Duvida
 import br.com.monitorfan.dados.Monitoria
 import br.com.monitorfan.dados.Usuario
+import br.com.monitorfan.util.SenhaUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -42,9 +44,13 @@ class MonitorFanRepository(
     // ------------------------------------------------------------------
 
     suspend fun autenticar(email: String, senha: String): Usuario? {
-        return usuarioDao.buscarPorEmail(email.trim().lowercase())?.let { entity ->
-            if (entity.senha == senha) entity.toDomain() else null
+        val entity = usuarioDao.buscarPorEmail(email.trim().lowercase()) ?: return null
+        if (!SenhaUtils.verificar(senha, entity.senha)) return null
+        // Migra senha legada (texto puro) para hash na primeira autenticação bem-sucedida
+        if (!SenhaUtils.estaHasheada(entity.senha)) {
+            usuarioDao.atualizarSenha(entity.id, SenhaUtils.hashear(senha))
         }
+        return entity.toDomain()
     }
 
     suspend fun emailJaCadastrado(email: String): Boolean {
@@ -77,19 +83,17 @@ class MonitorFanRepository(
     }
 
     suspend fun alterarSenha(usuarioId: Long, senhaAtual: String, novaSenha: String): Boolean {
-        val usuario = usuarioDao.buscarPorId(usuarioId)
-        return if (usuario != null && usuario.senha == senhaAtual) {
-            usuarioDao.atualizarSenha(usuarioId, novaSenha)
-            true
-        } else false
+        val usuario = usuarioDao.buscarPorId(usuarioId) ?: return false
+        if (!SenhaUtils.verificar(senhaAtual, usuario.senha)) return false
+        usuarioDao.atualizarSenha(usuarioId, SenhaUtils.hashear(novaSenha))
+        return true
     }
 
     suspend fun redefinirSenha(email: String, matricula: String, novaSenha: String): Boolean {
         val usuario = usuarioDao.buscarPorEmailEMatricula(email.trim().lowercase(), matricula.trim())
-        return if (usuario != null) {
-            usuarioDao.atualizarSenha(usuario.id, novaSenha)
-            true
-        } else false
+            ?: return false
+        usuarioDao.atualizarSenha(usuario.id, SenhaUtils.hashear(novaSenha))
+        return true
     }
 
     suspend fun emailJaCadastradoPorOutro(email: String, excluindoId: Long): Boolean {
@@ -206,104 +210,107 @@ class MonitorFanRepository(
     // ------------------------------------------------------------------
 
     private suspend fun inserirDadosIniciais() {
-        val adminId = usuarioDao.inserir(
+        // Conta admin sempre criada; altere a senha após o primeiro acesso
+        usuarioDao.inserir(
             UsuarioEntity(
                 nome = "Administrador",
                 email = "admin@monitorfan.com",
-                senha = "admin123",
+                senha = SenhaUtils.hashear("admin123"),
                 curso = "Engenharia de Software",
                 matricula = "ADM0001",
                 cargo = Cargo.ADMIN.name
             )
         )
 
-        val anaId = usuarioDao.inserir(
-            UsuarioEntity(
-                nome = "Ana Martins",
-                email = "ana@monitorfan.com",
-                senha = "123456",
-                curso = "Engenharia de Software",
-                matricula = "ES2023001",
-                cargo = Cargo.MONITOR.name
+        if (BuildConfig.DEBUG) {
+            val anaId = usuarioDao.inserir(
+                UsuarioEntity(
+                    nome = "Ana Martins",
+                    email = "ana@monitorfan.com",
+                    senha = SenhaUtils.hashear("123456"),
+                    curso = "Engenharia de Software",
+                    matricula = "ES2023001",
+                    cargo = Cargo.MONITOR.name
+                )
             )
-        )
 
-        val rafaelId = usuarioDao.inserir(
-            UsuarioEntity(
-                nome = "Rafael Oliveira",
-                email = "rafael@monitorfan.com",
-                senha = "123456",
-                curso = "Engenharia de Software",
-                matricula = "ES2023002",
-                cargo = Cargo.PROFESSOR.name
+            val rafaelId = usuarioDao.inserir(
+                UsuarioEntity(
+                    nome = "Rafael Oliveira",
+                    email = "rafael@monitorfan.com",
+                    senha = SenhaUtils.hashear("123456"),
+                    curso = "Engenharia de Software",
+                    matricula = "ES2023002",
+                    cargo = Cargo.PROFESSOR.name
+                )
             )
-        )
 
-        usuarioDao.inserir(
-            UsuarioEntity(
-                nome = "Lucas Andrade",
-                email = "lucas@monitorfan.com",
-                senha = "123456",
-                curso = "Engenharia de Software",
-                matricula = "ES2024010",
-                cargo = Cargo.USUARIO.name
+            usuarioDao.inserir(
+                UsuarioEntity(
+                    nome = "Lucas Andrade",
+                    email = "lucas@monitorfan.com",
+                    senha = SenhaUtils.hashear("123456"),
+                    curso = "Engenharia de Software",
+                    matricula = "ES2024010",
+                    cargo = Cargo.USUARIO.name
+                )
             )
-        )
 
-        usuarioDao.inserir(
-            UsuarioEntity(
-                nome = "Marina Souza",
-                email = "marina@monitorfan.com",
-                senha = "123456",
-                curso = "Psicologia",
-                matricula = "PS2024005",
-                cargo = Cargo.USUARIO.name
+            usuarioDao.inserir(
+                UsuarioEntity(
+                    nome = "Marina Souza",
+                    email = "marina@monitorfan.com",
+                    senha = SenhaUtils.hashear("123456"),
+                    curso = "Psicologia",
+                    matricula = "PS2024005",
+                    cargo = Cargo.USUARIO.name
+                )
             )
-        )
 
-        val pedroId = usuarioDao.inserir(
-            UsuarioEntity(
-                nome = "Pedro Lima",
-                email = "pedro@monitorfan.com",
-                senha = "123456",
-                curso = "Psicologia",
-                matricula = "PS2023009",
-                cargo = Cargo.MONITOR.name
+            val pedroId = usuarioDao.inserir(
+                UsuarioEntity(
+                    nome = "Pedro Lima",
+                    email = "pedro@monitorfan.com",
+                    senha = SenhaUtils.hashear("123456"),
+                    curso = "Psicologia",
+                    matricula = "PS2023009",
+                    cargo = Cargo.MONITOR.name
+                )
             )
-        )
 
-        monitoriaDao.inserir(
-            MonitoriaEntity(
-                monitorId = anaId,
-                disciplina = "Cálculo I",
-                curso = "Engenharia de Software",
-                diaSemana = "Segunda",
-                horario = "14:00 - 16:00",
-                sala = "Lab 03"
+            monitoriaDao.inserir(
+                MonitoriaEntity(
+                    monitorId = anaId,
+                    disciplina = "Cálculo I",
+                    curso = "Engenharia de Software",
+                    diaSemana = "Segunda",
+                    horario = "14:00 - 16:00",
+                    sala = "Lab 03"
+                )
             )
-        )
 
-        monitoriaDao.inserir(
-            MonitoriaEntity(
-                monitorId = rafaelId,
-                disciplina = "Estrutura de Dados",
-                curso = "Engenharia de Software",
-                diaSemana = "Quarta",
-                horario = "10:00 - 12:00",
-                sala = "Sala 204"
+            monitoriaDao.inserir(
+                MonitoriaEntity(
+                    monitorId = rafaelId,
+                    disciplina = "Estrutura de Dados",
+                    curso = "Engenharia de Software",
+                    diaSemana = "Quarta",
+                    horario = "10:00 - 12:00",
+                    sala = "Sala 204"
+                )
             )
-        )
 
-        monitoriaDao.inserir(
-            MonitoriaEntity(
-                monitorId = pedroId,
-                disciplina = "Psicologia Cognitiva",
-                curso = "Psicologia",
-                diaSemana = "Terça",
-                horario = "16:00 - 18:00",
-                sala = "Sala 110"
+            monitoriaDao.inserir(
+                MonitoriaEntity(
+                    monitorId = pedroId,
+                    disciplina = "Psicologia Cognitiva",
+                    curso = "Psicologia",
+                    diaSemana = "Terça",
+                    horario = "16:00 - 18:00",
+                    sala = "Sala 110"
+                )
             )
-        )
+        }
     }
 }
 

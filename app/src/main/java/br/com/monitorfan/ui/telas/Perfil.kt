@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -83,6 +84,7 @@ import br.com.monitorfan.ui.viewmodel.AlterarSenhaState
 import br.com.monitorfan.ui.viewmodel.EditarPerfilState
 import br.com.monitorfan.ui.viewmodel.PerfilViewModel
 import br.com.monitorfan.ui.viewmodel.PerfilViewModelFactory
+import br.com.monitorfan.util.SessaoPrefs
 import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,8 +96,16 @@ fun TelaPerfil(
     val usuario = Repositorio.usuarioLogado.value ?: return
     val context = LocalContext.current
     val editarState by perfilViewModel.state.collectAsState()
+    val alterarSenhaState by perfilViewModel.alterarSenhaState.collectAsState()
 
     var modoEdicao by remember { mutableStateOf(false) }
+    var mostrarDialogSenha by remember { mutableStateOf(false) }
+    var senhaAtual by remember { mutableStateOf("") }
+    var novaSenha by remember { mutableStateOf("") }
+    var confirmarSenha by remember { mutableStateOf("") }
+    var senhaAtualVisivel by remember { mutableStateOf(false) }
+    var novaSenhaVisivel by remember { mutableStateOf(false) }
+    var confirmarSenhaVisivel by remember { mutableStateOf(false) }
 
     var novoNome by remember { mutableStateOf(TextFieldValue(usuario.nome)) }
     var novoEmail by remember { mutableStateOf(TextFieldValue(usuario.email)) }
@@ -121,6 +131,16 @@ fun TelaPerfil(
         if (editarState is EditarPerfilState.Sucesso) {
             modoEdicao = false
             perfilViewModel.resetState()
+        }
+    }
+
+    LaunchedEffect(alterarSenhaState) {
+        if (alterarSenhaState is AlterarSenhaState.Sucesso) {
+            mostrarDialogSenha = false
+            senhaAtual = ""
+            novaSenha = ""
+            confirmarSenha = ""
+            perfilViewModel.resetAlterarSenhaState()
         }
     }
 
@@ -445,10 +465,33 @@ fun TelaPerfil(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        senhaAtual = ""
+                        novaSenha = ""
+                        confirmarSenha = ""
+                        perfilViewModel.resetAlterarSenhaState()
+                        mostrarDialogSenha = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, OrangePrimary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangePrimary)
+                ) {
+                    Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                    Spacer(modifier = Modifier.padding(horizontal = 6.dp))
+                    Text("Alterar senha", fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Button(
                     onClick = {
+                        SessaoPrefs.limpar(context)
                         Repositorio.encerrarSessao()
                         onLogout()
                     },
@@ -472,6 +515,124 @@ fun TelaPerfil(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        if (mostrarDialogSenha) {
+            AlertDialog(
+                onDismissRequest = {
+                    if (alterarSenhaState !is AlterarSenhaState.Carregando) {
+                        mostrarDialogSenha = false
+                        perfilViewModel.resetAlterarSenhaState()
+                    }
+                },
+                title = {
+                    Text("Alterar Senha", color = WhiteSoft, fontWeight = FontWeight.Bold)
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = senhaAtual,
+                            onValueChange = {
+                                senhaAtual = it
+                                if (alterarSenhaState is AlterarSenhaState.Erro) perfilViewModel.resetAlterarSenhaState()
+                            },
+                            label = { Text("Senha atual") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                            trailingIcon = {
+                                IconButton(onClick = { senhaAtualVisivel = !senhaAtualVisivel }) {
+                                    Icon(
+                                        imageVector = if (senhaAtualVisivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = null
+                                    )
+                                }
+                            },
+                            visualTransformation = if (senhaAtualVisivel) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = textFieldColors()
+                        )
+                        OutlinedTextField(
+                            value = novaSenha,
+                            onValueChange = {
+                                novaSenha = it
+                                if (alterarSenhaState is AlterarSenhaState.Erro) perfilViewModel.resetAlterarSenhaState()
+                            },
+                            label = { Text("Nova senha") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                            trailingIcon = {
+                                IconButton(onClick = { novaSenhaVisivel = !novaSenhaVisivel }) {
+                                    Icon(
+                                        imageVector = if (novaSenhaVisivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = null
+                                    )
+                                }
+                            },
+                            visualTransformation = if (novaSenhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = textFieldColors()
+                        )
+                        OutlinedTextField(
+                            value = confirmarSenha,
+                            onValueChange = {
+                                confirmarSenha = it
+                                if (alterarSenhaState is AlterarSenhaState.Erro) perfilViewModel.resetAlterarSenhaState()
+                            },
+                            label = { Text("Confirmar nova senha") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                            trailingIcon = {
+                                IconButton(onClick = { confirmarSenhaVisivel = !confirmarSenhaVisivel }) {
+                                    Icon(
+                                        imageVector = if (confirmarSenhaVisivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = null
+                                    )
+                                }
+                            },
+                            visualTransformation = if (confirmarSenhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = textFieldColors()
+                        )
+                        if (alterarSenhaState is AlterarSenhaState.Erro) {
+                            Text(
+                                text = (alterarSenhaState as AlterarSenhaState.Erro).mensagem,
+                                color = Color(0xFFFF6B6B),
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            perfilViewModel.alterarSenha(usuario, senhaAtual, novaSenha, confirmarSenha)
+                        },
+                        enabled = alterarSenhaState !is AlterarSenhaState.Carregando,
+                        colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+                    ) {
+                        if (alterarSenhaState is AlterarSenhaState.Carregando) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                        } else {
+                            Text("Salvar")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            mostrarDialogSenha = false
+                            perfilViewModel.resetAlterarSenhaState()
+                        },
+                        enabled = alterarSenhaState !is AlterarSenhaState.Carregando
+                    ) {
+                        Text("Cancelar", color = GrayText)
+                    }
+                },
+                containerColor = BluePrimary
+            )
         }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import br.com.monitorfan.data.local.entity.toDomain
 import br.com.monitorfan.data.local.entity.toEntity
 import br.com.monitorfan.data.repository.MonitorFanRepository
+import br.com.monitorfan.util.SenhaUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -33,6 +34,7 @@ object Repositorio {
     val duvidas = mutableStateListOf<Duvida>()
 
     val usuarioLogado = mutableStateOf<Usuario?>(null)
+    val isInicializado = mutableStateOf(false)
 
     // ------------------------------------------------------------------
     // Inicialização com Room
@@ -79,7 +81,7 @@ object Repositorio {
 
     fun autenticar(email: String, senha: String): Usuario? {
         val encontrado = usuarios.firstOrNull {
-            it.email.equals(email.trim(), ignoreCase = true) && it.senha == senha
+            it.email.equals(email.trim(), ignoreCase = true) && SenhaUtils.verificar(senha, it.senha)
         }
         if (encontrado != null) usuarioLogado.value = encontrado
         return encontrado
@@ -103,7 +105,7 @@ object Repositorio {
             id = proximoIdUsuario++,
             nome = nome.trim(),
             email = email.trim(),
-            senha = senha,
+            senha = SenhaUtils.hashear(senha),
             curso = curso,
             matricula = matricula.trim(),
             cargo = Cargo.USUARIO
@@ -142,7 +144,7 @@ object Repositorio {
     fun atualizarSenhaEmMemoria(id: Long, novaSenha: String) {
         val indice = usuarios.indexOfFirst { it.id == id }
         if (indice >= 0) {
-            val atualizado = usuarios[indice].copy(senha = novaSenha)
+            val atualizado = usuarios[indice].copy(senha = SenhaUtils.hashear(novaSenha))
             usuarios[indice] = atualizado
             if (usuarioLogado.value?.id == id) usuarioLogado.value = atualizado
         }
