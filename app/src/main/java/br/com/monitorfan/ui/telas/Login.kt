@@ -1,4 +1,4 @@
-package com.example.appexemplo.ui.telas
+package br.com.monitorfan.ui.telas
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -26,6 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,11 +37,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.monitorfan.dados.Usuario
 import br.com.monitorfan.ui.theme.BlueDark
 import br.com.monitorfan.ui.theme.BluePrimary
 import br.com.monitorfan.ui.theme.BorderSoft
@@ -46,25 +53,34 @@ import br.com.monitorfan.ui.theme.FieldColor
 import br.com.monitorfan.ui.theme.GrayText
 import br.com.monitorfan.ui.theme.OrangePrimary
 import br.com.monitorfan.ui.theme.WhiteSoft
-
+import br.com.monitorfan.ui.viewmodel.AuthViewModel
+import br.com.monitorfan.ui.viewmodel.AuthViewModelFactory
+import br.com.monitorfan.ui.viewmodel.LoginState
 
 @Composable
 fun TelaLogin(
-    onEntrarClick: () -> Unit = {},
-    onCriarContaClick: () -> Unit = {}
+    onLoginSucesso: (Usuario) -> Unit = {},
+    onCriarContaClick: () -> Unit = {},
+    onEsqueceuSenhaClick: () -> Unit = {},
+    authViewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory(LocalContext.current))
 ) {
-    var email by remember { mutableStateOf("") }
-    var senha by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(TextFieldValue("")) }
+    var senha by remember { mutableStateOf(TextFieldValue("")) }
     var senhaVisivel by remember { mutableStateOf(false) }
+
+    val loginState by authViewModel.loginState.collectAsState()
+
+    LaunchedEffect(loginState) {
+        if (loginState is LoginState.Sucesso) {
+            onLoginSucesso((loginState as LoginState.Sucesso).usuario)
+            authViewModel.resetLoginState()
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(BlueDark, BluePrimary, BlueDark)
-                )
-            )
+            .background(Brush.verticalGradient(listOf(BlueDark, BluePrimary, BlueDark)))
     ) {
         Column(
             modifier = Modifier
@@ -76,37 +92,21 @@ fun TelaLogin(
             Spacer(modifier = Modifier.height(24.dp))
 
             Row {
-                Text(
-                    text = "Monitor",
-                    color = WhiteSoft,
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Text(
-                    text = "Fan",
-                    color = OrangePrimary,
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
+                Text("Monitor", color = WhiteSoft, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Fan", color = OrangePrimary, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
             }
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            Text(
-                text = "Bem vindo(a)",
-                color = GrayText,
-                fontSize = 20.sp
-            )
+            Text(text = "Bem vindo(a)", color = GrayText, fontSize = 20.sp)
 
             Spacer(modifier = Modifier.height(32.dp))
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it; if (loginState is LoginState.Erro) authViewModel.resetLoginState() },
                 label = { Text("E-mail") },
-                leadingIcon = {
-                    Icon(Icons.Default.Email, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -117,11 +117,9 @@ fun TelaLogin(
 
             OutlinedTextField(
                 value = senha,
-                onValueChange = { senha = it },
+                onValueChange = { senha = it; if (loginState is LoginState.Erro) authViewModel.resetLoginState() },
                 label = { Text("Senha") },
-                leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
                         Icon(
@@ -138,53 +136,46 @@ fun TelaLogin(
                 colors = loginTextFieldColors()
             )
 
+            if (loginState is LoginState.Erro) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = (loginState as LoginState.Erro).mensagem,
+                    color = Color(0xFFFF6B6B),
+                    fontSize = 13.sp,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
-            TextButton(
-                onClick = {},
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text(
-                    text = "Esqueceu a senha?",
-                    color = GrayText,
-                    fontSize = 13.sp
-                )
+            TextButton(onClick = onEsqueceuSenhaClick, modifier = Modifier.align(Alignment.End)) {
+                Text(text = "Esqueceu a senha?", color = GrayText, fontSize = 13.sp)
             }
 
             Spacer(modifier = Modifier.height(18.dp))
 
             Button(
-                onClick = onEntrarClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                onClick = { authViewModel.login(email.text, senha.text) },
+                enabled = loginState !is LoginState.Carregando,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = OrangePrimary,
                     contentColor = Color.White
                 )
             ) {
-                Text(
-                    text = "Entrar",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                if (loginState is LoginState.Carregando) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.height(24.dp))
+                } else {
+                    Text(text = "Entrar", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             TextButton(onClick = onCriarContaClick) {
-                Text(
-                    text = "Não tem conta? ",
-                    color = GrayText,
-                    fontSize = 15.sp
-                )
-                Text(
-                    text = "Criar uma",
-                    color = OrangePrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = "Não tem conta? ", color = GrayText, fontSize = 15.sp)
+                Text(text = "Criar uma", color = OrangePrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

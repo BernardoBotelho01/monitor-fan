@@ -1,8 +1,5 @@
 package br.com.monitorfan.navegacao
 
-import com.example.appexemplo.ui.telas.TelaFeedDuvida
-import com.example.appexemplo.ui.telas.TelaHome
-import com.example.appexemplo.ui.telas.TelaPerfil
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -26,8 +23,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import br.com.monitorfan.ui.telas.TelaDetalheDuvida
+import br.com.monitorfan.ui.telas.TelaFeedDuvida
+import br.com.monitorfan.ui.telas.TelaHome
 import br.com.monitorfan.ui.telas.TelaNovaDuvida
+import br.com.monitorfan.ui.telas.TelaPerfil
 
 class BottomAppBarItem(
     val icon: ImageVector,
@@ -50,6 +52,15 @@ sealed class ScreenItem(
     )
 }
 
+/**
+ * Estados possíveis dentro da aba Feed.
+ */
+private sealed class EstadoFeed {
+    data object Lista : EstadoFeed()
+    data object NovaDuvida : EstadoFeed()
+    data class Detalhe(val duvidaId: Long) : EstadoFeed()
+}
+
 @Composable
 fun AppMonitorFanLogado(
     onLogout: () -> Unit = {}
@@ -63,7 +74,7 @@ fun AppMonitorFanLogado(
     }
 
     var currentScreen by remember { mutableStateOf<ScreenItem>(ScreenItem.Home) }
-    var mostrarNovaDuvida by remember { mutableStateOf(false) }
+    var estadoFeed by remember { mutableStateOf<EstadoFeed>(EstadoFeed.Lista) }
 
     val pagerState = rememberPagerState(
         initialPage = 0,
@@ -76,15 +87,19 @@ fun AppMonitorFanLogado(
 
     LaunchedEffect(pagerState.currentPage) {
         currentScreen = screens[pagerState.currentPage]
+        // Ao sair do feed, volta para a listagem
         if (currentScreen != ScreenItem.Feed) {
-            mostrarNovaDuvida = false
+            estadoFeed = EstadoFeed.Lista
         }
     }
+
+    // Só esconde a bottom bar em sub-telas do feed (nova dúvida / detalhe)
+    val escondeBottomBar = currentScreen == ScreenItem.Feed && estadoFeed !is EstadoFeed.Lista
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (!mostrarNovaDuvida) {
+            if (!escondeBottomBar) {
                 NavigationBar(
                     containerColor = Color(0xFF1F2942),
                     tonalElevation = 0.dp
@@ -93,18 +108,14 @@ fun AppMonitorFanLogado(
                         with(screen.bottomAppBarItem) {
                             NavigationBarItem(
                                 selected = screen == currentScreen,
-                                onClick = {
-                                    currentScreen = screen
-                                },
+                                onClick = { currentScreen = screen },
                                 icon = {
                                     Icon(
                                         imageVector = icon,
                                         contentDescription = null
                                     )
                                 },
-                                label = {
-                                    Text(label)
-                                },
+                                label = { Text(label) },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = Color(0xFFF17535),
                                     selectedTextColor = Color(0xFFF17535),
@@ -123,7 +134,7 @@ fun AppMonitorFanLogado(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.padding(innerPadding),
-            userScrollEnabled = !mostrarNovaDuvida
+            userScrollEnabled = !escondeBottomBar
         ) { page ->
 
             when (screens[page]) {
@@ -132,31 +143,38 @@ fun AppMonitorFanLogado(
                 }
 
                 ScreenItem.Feed -> {
-                    if (mostrarNovaDuvida) {
-                        TelaNovaDuvida(
-                            onBackClick = {
-                                mostrarNovaDuvida = false
-                            },
-                            onPublishClick = { _, _, _ ->
-                                mostrarNovaDuvida = false
-                            }
-                        )
-                    } else {
-                        TelaFeedDuvida(
-                            onNovaDuvidaClick = {
-                                mostrarNovaDuvida = true
-                            }
-                        )
+                    when (val estado = estadoFeed) {
+                        is EstadoFeed.Lista -> {
+                            TelaFeedDuvida(
+                                onNovaDuvidaClick = {
+                                    estadoFeed = EstadoFeed.NovaDuvida
+                                },
+                                onAbrirDuvida = { id ->
+                                    estadoFeed = EstadoFeed.Detalhe(id)
+                                }
+                            )
+                        }
+
+                        is EstadoFeed.NovaDuvida -> {
+                            TelaNovaDuvida(
+                                onBackClick = { estadoFeed = EstadoFeed.Lista },
+                                onDuvidaPublicada = { estadoFeed = EstadoFeed.Lista }
+                            )
+                        }
+
+                        is EstadoFeed.Detalhe -> {
+                            TelaDetalheDuvida(
+                                duvidaId = estado.duvidaId,
+                                onBackClick = { estadoFeed = EstadoFeed.Lista }
+                            )
+                        }
                     }
                 }
 
                 ScreenItem.Perfil -> {
-                    TelaPerfil(
-                        onLogout = onLogout
-                    )
+                    TelaPerfil(onLogout = onLogout)
                 }
             }
         }
     }
 }
-

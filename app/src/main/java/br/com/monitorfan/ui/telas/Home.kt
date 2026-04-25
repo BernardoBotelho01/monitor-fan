@@ -1,4 +1,4 @@
-package com.example.appexemplo.ui.telas
+package br.com.monitorfan.ui.telas
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,14 +29,25 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.monitorfan.dados.Cargo
+import br.com.monitorfan.dados.Monitoria
+import br.com.monitorfan.dados.Repositorio
+import br.com.monitorfan.dados.Usuario
 import br.com.monitorfan.ui.theme.BlueDark
 import br.com.monitorfan.ui.theme.BluePrimary
 import br.com.monitorfan.ui.theme.BorderSoft
@@ -45,80 +56,71 @@ import br.com.monitorfan.ui.theme.FieldColor
 import br.com.monitorfan.ui.theme.GrayText
 import br.com.monitorfan.ui.theme.OrangePrimary
 import br.com.monitorfan.ui.theme.WhiteSoft
-
-
-data class Monitoria(
-    val nome: String,
-    val disciplina: String,
-    val curso: String,
-    val horario: String,
-    val destaque: Boolean = false
-)
+import br.com.monitorfan.ui.viewmodel.MonitoriaViewModel
+import br.com.monitorfan.ui.viewmodel.MonitoriaViewModelFactory
 
 @Composable
-fun TelaHome() {
-    val cursos = listOf("Todos", "Computação", "Engenharia", "Matemática")
-    val monitorias = listOf(
-        Monitoria("Ana Martins", "Cálculo I", "Computação", "Hoje 14h"),
-        Monitoria("Rafael Oliveira", "ED & Algoritmos", "Computação", "Amanhã 10h", true),
-        Monitoria("Julia Santos", "Física II", "Engenharia", "Qua 16h"),
-        Monitoria("Pedro Lima", "Álgebra Linear", "Matemática", "Hoje 16h")
-    )
+fun TelaHome(
+    monitoriaViewModel: MonitoriaViewModel = viewModel(factory = MonitoriaViewModelFactory(LocalContext.current))
+) {
+    val usuario = Repositorio.usuarioLogado.value ?: return
+
+    val todasDoCurso by monitoriaViewModel.monitoriasDoCurso.collectAsState()
+
+    val disciplinas = listOf("Todas") + todasDoCurso.map { it.disciplina }.distinct()
+
+    var filtroSelecionado by remember { mutableStateOf("Todas") }
+    var busca by remember { mutableStateOf("") }
+
+    val monitoriasVisiveis = todasDoCurso
+        .filter { filtroSelecionado == "Todas" || it.disciplina == filtroSelecionado }
+        .filter { m ->
+            if (busca.isBlank()) return@filter true
+            val termo = busca.trim().lowercase()
+            val monitor = Repositorio.buscarUsuario(m.monitorId)?.nome?.lowercase().orEmpty()
+            m.disciplina.lowercase().contains(termo) || monitor.contains(termo)
+        }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(BlueDark, BluePrimary, BlueDark)
-                )
-            )
+            .background(brush = Brush.verticalGradient(colors = listOf(BlueDark, BluePrimary, BlueDark)))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 20.dp, vertical = 18.dp)
         ) {
-            Text(
-                text = "Olá, Lucas 👋",
-                color = GrayText,
-                fontSize = 20.sp
-            )
+            Text(text = "Olá, ${usuario.nome.substringBefore(" ")} 👋", color = GrayText, fontSize = 20.sp)
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Row {
-                Text(
-                    text = "Monitorias ",
-                    color = WhiteSoft,
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Text(
-                    text = "Hoje",
-                    color = OrangePrimary,
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
+                Text("Monitorias ", color = WhiteSoft, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
+                Text("do Curso", color = OrangePrimary, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(text = usuario.curso, color = GrayText, fontSize = 14.sp)
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            SearchField()
+            SearchField(value = busca, onValueChange = { busca = it })
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            SectionTitle("CURSOS")
+            SectionTitle("DISCIPLINAS")
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(cursos.size) { index ->
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(disciplinas.size) { index ->
+                    val disciplina = disciplinas[index]
                     CourseChip(
-                        text = cursos[index],
-                        selected = index == 0
+                        text = disciplina,
+                        selected = disciplina == filtroSelecionado,
+                        onClick = { filtroSelecionado = disciplina }
                     )
                 }
             }
@@ -129,17 +131,25 @@ fun TelaHome() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                items(monitorias) { item ->
-                    MonitoriaCard(item)
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Spacer(modifier = Modifier.height(24.dp))
+            if (monitoriasVisiveis.isEmpty()) {
+                EstadoVazio(
+                    texto = if (todasDoCurso.isEmpty())
+                        "Nenhuma monitoria cadastrada ainda para o seu curso."
+                    else
+                        "Nenhuma monitoria encontrada com esse filtro."
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(monitoriasVisiveis) { item ->
+                        val responsavel = Repositorio.buscarUsuario(item.monitorId)
+                        if (responsavel != null) {
+                            MonitoriaCard(item, responsavel)
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
                 }
             }
         }
@@ -147,27 +157,24 @@ fun TelaHome() {
 }
 
 @Composable
-fun SearchField() {
+private fun EstadoVazio(texto: String) {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = texto, color = GrayText, fontSize = 14.sp)
+    }
+}
+
+@Composable
+fun SearchField(value: String, onValueChange: (String) -> Unit) {
     OutlinedTextField(
-        value = "",
-        onValueChange = {},
-        readOnly = true,
-        placeholder = {
-            Text(
-                text = "Buscar disciplina ou monitor...",
-                color = GrayText.copy(alpha = 0.9f)
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                tint = GrayText
-            )
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(64.dp),
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text(text = "Buscar disciplina ou monitor...", color = GrayText.copy(alpha = 0.9f)) },
+        leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = GrayText) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().height(64.dp),
         shape = RoundedCornerShape(20.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = FieldColor,
@@ -185,25 +192,16 @@ fun SearchField() {
 
 @Composable
 fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        color = GrayText,
-        fontSize = 15.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 2.sp
-    )
+    Text(text = title, color = GrayText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp)
 }
 
 @Composable
-fun CourseChip(
-    text: String,
-    selected: Boolean
-) {
+fun CourseChip(text: String, selected: Boolean, onClick: () -> Unit = {}) {
     Surface(
         shape = RoundedCornerShape(50),
         color = if (selected) OrangePrimary else FieldColor,
         border = null,
-        modifier = Modifier.clickable { }
+        modifier = Modifier.clickable { onClick() }
     ) {
         Text(
             text = text,
@@ -216,113 +214,62 @@ fun CourseChip(
 }
 
 @Composable
-fun MonitoriaCard(item: Monitoria) {
-    val borderColor = if (item.destaque) {
-        OrangePrimary.copy(alpha = 0.85f)
-    } else {
-        BorderSoft.copy(alpha = 0.40f)
-    }
-
-    val badgeColor = if (item.destaque) {
-        OrangePrimary.copy(alpha = 0.20f)
-    } else {
-        FieldColor
-    }
-
-    val badgeTextColor = if (item.destaque) {
-        OrangePrimary
-    } else {
-        WhiteSoft
-    }
+fun MonitoriaCard(item: Monitoria, responsavel: Usuario) {
+    val ehProfessor = responsavel.cargo == Cargo.PROFESSOR
+    val borderColor = if (ehProfessor) OrangePrimary.copy(alpha = 0.85f) else BorderSoft.copy(alpha = 0.40f)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(24.dp)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = CardColor
-        ),
+            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(24.dp)),
+        colors = CardDefaults.cardColors(containerColor = CardColor),
         shape = RoundedCornerShape(24.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(72.dp)
                     .clip(CircleShape)
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(OrangePrimary, BluePrimary)
-                        )
-                    ),
+                    .background(brush = Brush.linearGradient(colors = listOf(OrangePrimary, BluePrimary))),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = initials(item.nome),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                )
+                Text(text = initials(responsavel.nome), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
             }
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = item.nome,
-                    color = WhiteSoft,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = responsavel.nome, color = WhiteSoft, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    CargoBadge(responsavel.cargo)
+                }
                 Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "${item.disciplina} · ${item.curso}",
-                    color = GrayText,
-                    fontSize = 15.sp
-                )
-            }
-
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = badgeColor
-            ) {
-                Text(
-                    text = item.horario,
-                    color = badgeTextColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-                )
+                Text(text = item.disciplina, color = GrayText, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(text = "${item.diaSemana} · ${item.horario}", color = GrayText, fontSize = 13.sp)
             }
         }
     }
 }
 
-
-
 @Composable
-fun SuggestionChip(text: String) {
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = FieldColor,
-        border = null
-    ) {
+fun CargoBadge(cargo: Cargo) {
+    val (cor, fundo) = when (cargo) {
+        Cargo.PROFESSOR -> OrangePrimary to OrangePrimary.copy(alpha = 0.18f)
+        Cargo.MONITOR -> WhiteSoft to FieldColor
+        else -> GrayText to FieldColor
+    }
+    Surface(shape = RoundedCornerShape(50), color = fundo) {
         Text(
-            text = text,
-            color = GrayText,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+            text = cargo.rotulo,
+            color = cor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
         )
     }
 }
