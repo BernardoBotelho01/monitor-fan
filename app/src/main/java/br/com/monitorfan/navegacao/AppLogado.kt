@@ -58,7 +58,7 @@ sealed class ScreenItem(
 private sealed class EstadoFeed {
     data object Lista : EstadoFeed()
     data object NovaDuvida : EstadoFeed()
-    data class Detalhe(val duvidaId: Long) : EstadoFeed()
+    data class Detalhe(val duvidaId: String) : EstadoFeed()
 }
 
 @Composable

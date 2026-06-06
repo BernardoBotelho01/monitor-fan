@@ -13,17 +13,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,9 +35,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,11 +55,6 @@ fun TelaEsqueceuSenha(
     authViewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory(LocalContext.current))
 ) {
     var email by remember { mutableStateOf(TextFieldValue("")) }
-    var matricula by remember { mutableStateOf(TextFieldValue("")) }
-    var novaSenha by remember { mutableStateOf(TextFieldValue("")) }
-    var confirmarSenha by remember { mutableStateOf(TextFieldValue("")) }
-    var novaSenhaVisivel by remember { mutableStateOf(false) }
-    var confirmarSenhaVisivel by remember { mutableStateOf(false) }
 
     val state by authViewModel.redefinirSenhaState.collectAsState()
 
@@ -98,7 +86,7 @@ fun TelaEsqueceuSenha(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "Informe o e-mail e a matrícula cadastrados. Se coincidirem, você poderá definir uma nova senha.",
+                text = "Informe o e-mail da sua conta e enviaremos um link para redefinir a senha.",
                 color = GrayText,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
@@ -118,7 +106,7 @@ fun TelaEsqueceuSenha(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "Senha redefinida com sucesso!",
+                    text = "E-mail enviado!",
                     color = WhiteSoft,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -128,10 +116,11 @@ fun TelaEsqueceuSenha(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "Agora você pode entrar com a nova senha.",
+                    text = "Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.",
                     color = GrayText,
                     fontSize = 15.sp,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    lineHeight = 22.sp
                 )
 
                 Spacer(modifier = Modifier.height(36.dp))
@@ -141,7 +130,9 @@ fun TelaEsqueceuSenha(
                         authViewModel.resetRedefinirSenhaState()
                         onVoltar()
                     },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = OrangePrimary,
@@ -165,74 +156,6 @@ fun TelaEsqueceuSenha(
                     colors = textFieldColors()
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                OutlinedTextField(
-                    value = matricula,
-                    onValueChange = {
-                        matricula = it
-                        if (state is RedefinirSenhaState.Erro) authViewModel.resetRedefinirSenhaState()
-                    },
-                    label = { Text("Matrícula") },
-                    leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = textFieldColors()
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                OutlinedTextField(
-                    value = novaSenha,
-                    onValueChange = {
-                        novaSenha = it
-                        if (state is RedefinirSenhaState.Erro) authViewModel.resetRedefinirSenhaState()
-                    },
-                    label = { Text("Nova senha") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    trailingIcon = {
-                        IconButton(onClick = { novaSenhaVisivel = !novaSenhaVisivel }) {
-                            Icon(
-                                imageVector = if (novaSenhaVisivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = null,
-                                tint = GrayText
-                            )
-                        }
-                    },
-                    visualTransformation = if (novaSenhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = textFieldColors()
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                OutlinedTextField(
-                    value = confirmarSenha,
-                    onValueChange = {
-                        confirmarSenha = it
-                        if (state is RedefinirSenhaState.Erro) authViewModel.resetRedefinirSenhaState()
-                    },
-                    label = { Text("Confirmar nova senha") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    trailingIcon = {
-                        IconButton(onClick = { confirmarSenhaVisivel = !confirmarSenhaVisivel }) {
-                            Icon(
-                                imageVector = if (confirmarSenhaVisivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = null,
-                                tint = GrayText
-                            )
-                        }
-                    },
-                    visualTransformation = if (confirmarSenhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = textFieldColors()
-                )
-
                 if (state is RedefinirSenhaState.Erro) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
@@ -246,13 +169,11 @@ fun TelaEsqueceuSenha(
                 Spacer(modifier = Modifier.height(28.dp))
 
                 Button(
-                    onClick = {
-                        authViewModel.redefinirSenha(
-                            email.text, matricula.text, novaSenha.text, confirmarSenha.text
-                        )
-                    },
+                    onClick = { authViewModel.redefinirSenha(email.text) },
                     enabled = state !is RedefinirSenhaState.Carregando,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = OrangePrimary,
@@ -262,7 +183,7 @@ fun TelaEsqueceuSenha(
                     if (state is RedefinirSenhaState.Carregando) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                     } else {
-                        Text("Redefinir senha", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Enviar e-mail", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 

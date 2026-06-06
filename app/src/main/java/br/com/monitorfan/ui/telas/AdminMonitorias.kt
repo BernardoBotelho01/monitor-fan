@@ -62,6 +62,7 @@ import br.com.monitorfan.dados.Cursos
 import br.com.monitorfan.dados.Monitoria
 import br.com.monitorfan.dados.Repositorio
 import br.com.monitorfan.dados.Usuario
+import br.com.monitorfan.util.DisciplinasRepository
 import br.com.monitorfan.ui.theme.BlueDark
 import br.com.monitorfan.ui.theme.BluePrimary
 import br.com.monitorfan.ui.theme.CardColor
@@ -312,8 +313,9 @@ private fun DialogoMonitoria(
     titulo: String,
     monitoriaInicial: Monitoria? = null,
     onDismiss: () -> Unit,
-    onSalvar: (Long, String, String, String, String, String) -> Unit
+    onSalvar: (String, String, String, String, String, String) -> Unit
 ) {
+    val context = LocalContext.current
     val responsavelInicial = monitoriaInicial?.let { Repositorio.buscarUsuario(it.monitorId) }
 
     var disciplina by remember { mutableStateOf(monitoriaInicial?.disciplina ?: "") }
@@ -324,11 +326,15 @@ private fun DialogoMonitoria(
     var responsavelSelecionado by remember { mutableStateOf<Usuario?>(responsavelInicial) }
 
     var expandeCurso by remember { mutableStateOf(false) }
+    var expandeDisciplina by remember { mutableStateOf(false) }
     var expandeDia by remember { mutableStateOf(false) }
     var expandeResponsavel by remember { mutableStateOf(false) }
 
     val responsaveisCurso = if (curso.isBlank()) emptyList()
     else Repositorio.responsaveisDoCurso(curso)
+
+    val disciplinasDoCurso = if (curso.isBlank()) emptyList()
+    else DisciplinasRepository.listarPorCurso(context, curso)
 
     val podeSalvar = responsavelSelecionado != null &&
             disciplina.isNotBlank() && curso.isNotBlank() &&
@@ -346,7 +352,7 @@ private fun DialogoMonitoria(
                     valor = curso, label = "Curso", expandido = expandeCurso,
                     onExpandirChange = { expandeCurso = it },
                     opcoes = Cursos.disponiveis,
-                    onSelecionar = { curso = it; responsavelSelecionado = null; expandeCurso = false }
+                    onSelecionar = { curso = it; responsavelSelecionado = null; disciplina = ""; expandeCurso = false }
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -391,12 +397,13 @@ private fun DialogoMonitoria(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedTextField(
-                    value = disciplina, onValueChange = { disciplina = it },
-                    label = { Text("Disciplina") }, singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = dialogoTextFieldColors()
+                CampoDropdown(
+                    valor = disciplina,
+                    label = "Disciplina",
+                    expandido = expandeDisciplina,
+                    onExpandirChange = { expandeDisciplina = it && curso.isNotBlank() },
+                    opcoes = disciplinasDoCurso,
+                    onSelecionar = { disciplina = it; expandeDisciplina = false }
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))

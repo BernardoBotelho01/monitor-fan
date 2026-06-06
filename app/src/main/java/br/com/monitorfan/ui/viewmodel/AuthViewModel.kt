@@ -1,20 +1,13 @@
 package br.com.monitorfan.ui.viewmodel
 
-import android.app.Application
 import android.content.Context
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import br.com.monitorfan.data.local.entity.UsuarioEntity
-import br.com.monitorfan.data.local.database.AppDatabase
-import br.com.monitorfan.data.remote.RetrofitClient
-import br.com.monitorfan.data.repository.MonitorFanRepository
-import br.com.monitorfan.dados.Cargo
+import br.com.monitorfan.MonitorFanApp
+import br.com.monitorfan.data.firebase.FirebaseRepository
 import br.com.monitorfan.dados.Repositorio
 import br.com.monitorfan.dados.Usuario
-import br.com.monitorfan.util.SenhaUtils
-import br.com.monitorfan.util.SessaoPrefs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,10 +34,7 @@ sealed class RedefinirSenhaState {
     data class Erro(val mensagem: String) : RedefinirSenhaState()
 }
 
-class AuthViewModel(
-    application: Application,
-    private val repository: MonitorFanRepository
-) : AndroidViewModel(application) {
+class AuthViewModel(private val repo: FirebaseRepository) : ViewModel() {
 
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Ocioso)
     val loginState: StateFlow<LoginState> = _loginState.asStateFlow()
@@ -62,24 +52,19 @@ class AuthViewModel(
         }
         viewModelScope.launch {
             _loginState.value = LoginState.Carregando
-            val usuario = repository.autenticar(email, senha)
-            if (usuario == null) {
-                _loginState.value = LoginState.Erro("E-mail ou senha inválidos.")
-            } else {
-                SessaoPrefs.salvar(getApplication(), usuario.id)
+            try {
+                val usuario = repo.login(email, senha)
                 Repositorio.usuarioLogado.value = usuario
                 _loginState.value = LoginState.Sucesso(usuario)
+            } catch (e: Exception) {
+                _loginState.value = LoginState.Erro("E-mail ou senha inválidos.")
             }
         }
     }
 
     fun cadastrar(
-        nome: String,
-        email: String,
-        senha: String,
-        confirmarSenha: String,
-        curso: String,
-        matricula: String
+        nome: String, email: String, senha: String,
+        confirmarSenha: String, curso: String, matricula: String
     ) {
         val erroValidacao = validar(nome, email, senha, confirmarSenha, curso, matricula)
         if (erroValidacao != null) {
@@ -88,48 +73,39 @@ class AuthViewModel(
         }
         viewModelScope.launch {
             _cadastroState.value = CadastroState.Carregando
-            if (repository.emailJaCadastrado(email)) {
-                _cadastroState.value = CadastroState.Erro("Já existe uma conta com esse e-mail.")
-                return@launch
+            try {
+                repo.cadastrar(nome, email, senha, curso, matricula)
+                _cadastroState.value = CadastroState.Sucesso
+            } catch (e: Exception) {
+                val msg = when {
+                    e.message?.contains("email address is already in use") == true ->
+                        "Já existe uma conta com esse e-mail."
+                    else -> "Erro ao criar conta. Tente novamente."
+                }
+                _cadastroState.value = CadastroState.Erro(msg)
             }
-            repository.inserirUsuario(
-                UsuarioEntity(
-                    nome = nome.trim(),
-                    email = email.trim().lowercase(),
-                    senha = SenhaUtils.hashear(senha),
-                    curso = curso,
-                    matricula = matricula.trim(),
-                    cargo = Cargo.USUARIO.name
-                )
-            )
-            _cadastroState.value = CadastroState.Sucesso
         }
     }
 
     fun logout() {
-        SessaoPrefs.limpar(getApplication())
+        repo.logout()
         Repositorio.encerrarSessao()
         _loginState.value = LoginState.Ocioso
     }
 
-    fun redefinirSenha(email: String, matricula: String, novaSenha: String, confirmar: String) {
-        if (email.isBlank() || matricula.isBlank()) {
-            _redefinirSenhaState.value = RedefinirSenhaState.Erro("Preencha e-mail e matrícula.")
-            return
-        }
-        if (novaSenha.length < 6) {
-            _redefinirSenhaState.value = RedefinirSenhaState.Erro("A senha deve ter pelo menos 6 caracteres.")
-            return
-        }
-        if (novaSenha != confirmar) {
-            _redefinirSenhaState.value = RedefinirSenhaState.Erro("As senhas não coincidem.")
+    fun redefinirSenha(email: String) {
+        if (email.isBlank()) {
+            _redefinirSenhaState.value = RedefinirSenhaState.Erro("Informe o e-mail.")
             return
         }
         viewModelScope.launch {
             _redefinirSenhaState.value = RedefinirSenhaState.Carregando
-            val sucesso = repository.redefinirSenha(email, matricula, novaSenha)
-            _redefinirSenhaState.value = if (sucesso) RedefinirSenhaState.Sucesso
-            else RedefinirSenhaState.Erro("E-mail ou matrícula não encontrados.")
+            try {
+                repo.enviarEmailRedefinicaoSenha(email)
+                _redefinirSenhaState.value = RedefinirSenhaState.Sucesso
+            } catch (e: Exception) {
+                _redefinirSenhaState.value = RedefinirSenhaState.Erro("Não foi possível enviar o e-mail. Verifique o endereço.")
+            }
         }
     }
 
@@ -153,16 +129,8 @@ class AuthViewModel(
 
 class AuthViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        val app = context.applicationContext as Application
-        val db = AppDatabase.getInstance(context)
-        val repo = MonitorFanRepository(
-            usuarioDao = db.usuarioDao(),
-            monitoriaDao = db.monitoriaDao(),
-            duvidaDao = db.duvidaDao(),
-            respostaDao = db.respostaDao(),
-            apiService = RetrofitClient.apiService
-        )
+        val repo = (context.applicationContext as MonitorFanApp).firebaseRepository
         @Suppress("UNCHECKED_CAST")
-        return AuthViewModel(app, repo) as T
+        return AuthViewModel(repo) as T
     }
 }

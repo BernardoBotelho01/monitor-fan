@@ -1,10 +1,5 @@
 package br.com.monitorfan.dados
 
-/**
- * Perfis disponíveis no sistema.
- * Todo cadastro nasce como USUARIO. O ADMIN é quem promove
- * alguém a MONITOR ou PROFESSOR.
- */
 enum class Cargo(val rotulo: String) {
     USUARIO("Aluno"),
     MONITOR("Monitor"),
@@ -12,10 +7,6 @@ enum class Cargo(val rotulo: String) {
     ADMIN("Administrador")
 }
 
-/**
- * Cursos disponíveis. Lista fixa para manter a separação de acesso
- * por curso consistente.
- */
 object Cursos {
     val disponiveis: List<String> = listOf(
         "Administração",
@@ -36,10 +27,9 @@ object Cursos {
 }
 
 data class Usuario(
-    val id: Long,
+    val id: String = "",
     var nome: String,
     var email: String,
-    var senha: String,
     var curso: String,
     var matricula: String,
     var cargo: Cargo,
@@ -47,8 +37,8 @@ data class Usuario(
 )
 
 data class Monitoria(
-    val id: Long,
-    val monitorId: Long,
+    val id: String = "",
+    val monitorId: String,
     val disciplina: String,
     val curso: String,
     val diaSemana: String,
@@ -57,19 +47,21 @@ data class Monitoria(
 )
 
 data class Resposta(
-    val id: Long,
-    val autorId: Long,
+    val id: String = "",
+    val autorId: String,
     val texto: String,
     val criadaEm: Long
 )
 
 data class Duvida(
-    val id: Long,
-    val autorId: Long,
+    val id: String = "",
+    val autorId: String,
     val curso: String,
     val disciplina: String,
     val titulo: String,
     val descricao: String,
     val criadaEm: Long,
+    val respostasCount: Int = 0,
+    val respondidaPorMonitor: Boolean = false,
     val respostas: MutableList<Resposta> = mutableListOf()
 )

@@ -171,7 +171,7 @@ fun SearchField(value: String, onValueChange: (String) -> Unit) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(text = "Buscar disciplina ou monitor...", color = GrayText.copy(alpha = 0.9f)) },
+        placeholder = { Text(text = "Disciplina ou monitor...", color = GrayText.copy(alpha = 0.9f)) },
         leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = GrayText) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth().height(64.dp),
@@ -242,12 +242,10 @@ fun MonitoriaCard(item: Monitoria, responsavel: Usuario) {
             Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = responsavel.nome, color = WhiteSoft, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    CargoBadge(responsavel.cargo)
-                }
+                Text(text = responsavel.nome, color = WhiteSoft, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
+                CargoBadge(responsavel.cargo)
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(text = item.disciplina, color = GrayText, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(text = "${item.diaSemana} · ${item.horario}", color = GrayText, fontSize = 13.sp)

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "798580877273",
+    "project_id": "monitorfan-66f16",
+    "storage_bucket": "monitorfan-66f16.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798580877273:android:777aadf6731d61bf1d1bc8",
+        "android_client_info": {
+          "package_name": "br.com.monitorfan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5aT9C_VAuseHsktWBv7ifbLfz-YhDv0U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

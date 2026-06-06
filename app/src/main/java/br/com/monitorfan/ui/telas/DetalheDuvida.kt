@@ -74,7 +74,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun TelaDetalheDuvida(
-    duvidaId: Long,
+    duvidaId: String,
     onBackClick: () -> Unit = {},
     duvidaViewModel: DuvidaViewModel = viewModel(factory = DuvidaViewModelFactory(LocalContext.current))
 ) {
@@ -92,9 +92,9 @@ fun TelaDetalheDuvida(
     var textoResposta by remember { mutableStateOf(TextFieldValue("")) }
     var modoEdicao by remember { mutableStateOf(false) }
     var confirmarDelete by remember { mutableStateOf(false) }
-    var editandoRespostaId by remember { mutableStateOf<Long?>(null) }
+    var editandoRespostaId by remember { mutableStateOf<String?>(null) }
     var editTextoResposta by remember { mutableStateOf(TextFieldValue("")) }
-    var confirmarDeleteRespostaId by remember { mutableStateOf<Long?>(null) }
+    var confirmarDeleteRespostaId by remember { mutableStateOf<String?>(null) }
 
     val focusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
@@ -370,8 +370,7 @@ fun TelaDetalheDuvida(
                     val respostaDeMonitorOuProf = autorResposta?.cargo == Cargo.MONITOR ||
                                                   autorResposta?.cargo == Cargo.PROFESSOR
                     val ehAutorResposta = usuario.id == resposta.autorId
-                    val podeEditarResposta = ehAutorResposta &&
-                            (usuario.cargo == Cargo.MONITOR || usuario.cargo == Cargo.PROFESSOR)
+                    val podeEditarResposta = ehAutorResposta || ehAdmin
                     val estaEditando = editandoRespostaId == resposta.id
 
                     Card(

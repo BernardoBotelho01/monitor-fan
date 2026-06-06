@@ -4,28 +4,30 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import br.com.monitorfan.data.local.database.AppDatabase
-import br.com.monitorfan.data.local.entity.DuvidaEntity
+import br.com.monitorfan.MonitorFanApp
+import br.com.monitorfan.data.firebase.FirebaseRepository
 import br.com.monitorfan.dados.Cargo
-import br.com.monitorfan.data.local.entity.RespostaEntity
-import br.com.monitorfan.data.remote.RetrofitClient
-import br.com.monitorfan.data.repository.MonitorFanRepository
 import br.com.monitorfan.dados.Duvida
 import br.com.monitorfan.dados.Repositorio
-import kotlinx.coroutines.Dispatchers
+import br.com.monitorfan.dados.Resposta
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.compose.runtime.snapshotFlow
 
-class DuvidaViewModel(private val repository: MonitorFanRepository) : ViewModel() {
+class DuvidaViewModel(private val repo: FirebaseRepository) : ViewModel() {
 
     val duvidas: StateFlow<List<Duvida>> by lazy {
         val curso = Repositorio.usuarioLogado.value?.curso ?: ""
-        repository.observarDuvidasDoCurso(curso)
+        repo.observarTodasDuvidas()
+            .map { lista -> lista.filter { it.curso == curso }.sortedByDescending { it.criadaEm } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     }
 
@@ -44,17 +46,28 @@ class DuvidaViewModel(private val repository: MonitorFanRepository) : ViewModel(
     private val _duvidaEditada = MutableStateFlow(false)
     val duvidaEditada: StateFlow<Boolean> = _duvidaEditada.asStateFlow()
 
-    fun carregarDuvida(duvidaId: Long) {
-        viewModelScope.launch {
-            _duvidaDetalhe.value = repository.buscarDuvida(duvidaId)
+    private var respostasJob: Job? = null
+
+    fun carregarDuvida(duvidaId: String) {
+        respostasJob?.cancel()
+        respostasJob = viewModelScope.launch {
+            combine(
+                repo.observarRespostasDaDuvida(duvidaId),
+                snapshotFlow { Repositorio.duvidas.toList() }
+            ) { respostas, duvidas ->
+                duvidas.firstOrNull { it.id == duvidaId }
+                    ?.copy(respostas = respostas.toMutableList())
+            }.collectLatest { duvida ->
+                _duvidaDetalhe.value = duvida
+            }
         }
     }
 
     fun criarDuvida(disciplina: String, titulo: String, descricao: String) {
         val usuario = Repositorio.usuarioLogado.value ?: return
         viewModelScope.launch {
-            repository.inserirDuvida(
-                DuvidaEntity(
+            repo.inserirDuvida(
+                Duvida(
                     autorId = usuario.id,
                     curso = usuario.curso,
                     disciplina = disciplina.trim(),
@@ -63,20 +76,11 @@ class DuvidaViewModel(private val repository: MonitorFanRepository) : ViewModel(
                     criadaEm = System.currentTimeMillis()
                 )
             )
-            withContext(Dispatchers.Main) {
-                Repositorio.criarDuvida(
-                    autorId = usuario.id,
-                    curso = usuario.curso,
-                    disciplina = disciplina,
-                    titulo = titulo,
-                    descricao = descricao
-                )
-                _duvidaPublicada.value = true
-            }
+            _duvidaPublicada.value = true
         }
     }
 
-    fun responderDuvida(duvidaId: Long, texto: String) {
+    fun responderDuvida(duvidaId: String, texto: String) {
         val usuario = Repositorio.usuarioLogado.value ?: return
         val duvidaAtual = _duvidaDetalhe.value ?: return
         if (duvidaAtual.curso != usuario.curso) return
@@ -86,70 +90,51 @@ class DuvidaViewModel(private val repository: MonitorFanRepository) : ViewModel(
         if (!podeResponder) return
 
         viewModelScope.launch {
-            repository.inserirResposta(
-                RespostaEntity(
-                    duvidaId = duvidaId,
-                    autorId = usuario.id,
-                    texto = texto.trim(),
-                    criadaEm = System.currentTimeMillis()
+            try {
+                repo.inserirResposta(
+                    duvidaId,
+                    Resposta(
+                        autorId = usuario.id,
+                        texto = texto.trim(),
+                        criadaEm = System.currentTimeMillis()
+                    ),
+                    usuario.cargo
                 )
-            )
-            Repositorio.responderDuvida(duvidaId, usuario, texto)
-            _duvidaDetalhe.value = repository.buscarDuvida(duvidaId)
-            _respostaEnviada.value = true
-        }
-    }
-
-    fun deletarDuvida(duvidaId: Long) {
-        viewModelScope.launch {
-            repository.deletarDuvida(duvidaId)
-            withContext(Dispatchers.Main) {
-                Repositorio.deletarDuvida(duvidaId)
-                _duvidaDetalhe.value = null
-                _duvidaDeletada.value = true
+                _respostaEnviada.value = true
+            } catch (e: Exception) {
+                android.util.Log.e("DuvidaViewModel", "Erro ao enviar resposta: ${e.message}", e)
             }
         }
     }
 
-    fun editarDuvida(duvidaId: Long, titulo: String, disciplina: String, descricao: String) {
+    fun deletarDuvida(duvidaId: String) {
+        viewModelScope.launch {
+            repo.deletarDuvida(duvidaId)
+            _duvidaDetalhe.value = null
+            _duvidaDeletada.value = true
+        }
+    }
+
+    fun editarDuvida(duvidaId: String, titulo: String, disciplina: String, descricao: String) {
         if (titulo.isBlank() || disciplina.isBlank() || descricao.isBlank()) return
         viewModelScope.launch {
-            repository.atualizarDuvida(duvidaId, titulo, disciplina, descricao)
-            withContext(Dispatchers.Main) {
-                Repositorio.atualizarDuvida(duvidaId, titulo, disciplina, descricao)
-                _duvidaDetalhe.value = _duvidaDetalhe.value?.copy(
-                    titulo = titulo.trim(),
-                    disciplina = disciplina.trim(),
-                    descricao = descricao.trim()
-                )
-                _duvidaEditada.value = true
-            }
+            repo.atualizarDuvida(duvidaId, titulo, disciplina, descricao)
+            _duvidaDetalhe.value = _duvidaDetalhe.value?.copy(
+                titulo = titulo.trim(),
+                disciplina = disciplina.trim(),
+                descricao = descricao.trim()
+            )
+            _duvidaEditada.value = true
         }
     }
 
-    fun deletarResposta(duvidaId: Long, respostaId: Long) {
-        viewModelScope.launch {
-            repository.deletarResposta(respostaId)
-            withContext(Dispatchers.Main) {
-                Repositorio.deletarResposta(duvidaId, respostaId)
-                _duvidaDetalhe.value = repository.buscarDuvida(duvidaId)
-            }
-        }
+    fun deletarResposta(duvidaId: String, respostaId: String) {
+        viewModelScope.launch { repo.deletarResposta(duvidaId, respostaId) }
     }
 
-    fun editarResposta(duvidaId: Long, respostaId: Long, texto: String) {
+    fun editarResposta(duvidaId: String, respostaId: String, texto: String) {
         if (texto.isBlank()) return
-        viewModelScope.launch {
-            repository.atualizarResposta(respostaId, texto)
-            withContext(Dispatchers.Main) {
-                Repositorio.atualizarResposta(duvidaId, respostaId, texto)
-                _duvidaDetalhe.value = _duvidaDetalhe.value?.let { d ->
-                    d.copy(respostas = d.respostas.map { r ->
-                        if (r.id == respostaId) r.copy(texto = texto.trim()) else r
-                    }.toMutableList())
-                }
-            }
-        }
+        viewModelScope.launch { repo.atualizarResposta(duvidaId, respostaId, texto) }
     }
 
     fun resetDuvidaPublicada() { _duvidaPublicada.value = false }
@@ -160,14 +145,7 @@ class DuvidaViewModel(private val repository: MonitorFanRepository) : ViewModel(
 
 class DuvidaViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        val db = AppDatabase.getInstance(context)
-        val repo = MonitorFanRepository(
-            usuarioDao = db.usuarioDao(),
-            monitoriaDao = db.monitoriaDao(),
-            duvidaDao = db.duvidaDao(),
-            respostaDao = db.respostaDao(),
-            apiService = RetrofitClient.apiService
-        )
+        val repo = (context.applicationContext as MonitorFanApp).firebaseRepository
         @Suppress("UNCHECKED_CAST")
         return DuvidaViewModel(repo) as T
     }

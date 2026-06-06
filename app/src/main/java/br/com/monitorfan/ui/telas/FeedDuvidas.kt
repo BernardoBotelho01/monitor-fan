@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,7 +65,7 @@ private val BorderSoft = Color(0xFF5A6A96)
 @Composable
 fun TelaFeedDuvida(
     onNovaDuvidaClick: () -> Unit = {},
-    onAbrirDuvida: (Long) -> Unit = {},
+    onAbrirDuvida: (String) -> Unit = {},
     duvidaViewModel: DuvidaViewModel = viewModel(factory = DuvidaViewModelFactory(LocalContext.current))
 ) {
     val usuario = Repositorio.usuarioLogado.value ?: return
@@ -118,10 +119,28 @@ fun TelaFeedDuvida(
             OutlinedTextField(
                 value = busca,
                 onValueChange = { busca = it },
-                placeholder = { Text(text = "Buscar dúvida, disciplina ou assunto...", color = GrayText.copy(alpha = 0.9f)) },
-                leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = GrayText) },
+                placeholder = {
+                    Text(
+                        text = "Dúvida, disciplina ou assunto...",
+                        color = GrayText.copy(alpha = 0.9f),
+                        fontSize = 16.sp
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = GrayText
+                    )
+                },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().height(64.dp),
+                textStyle = TextStyle(
+                    fontSize = 14.sp,
+                    color = WhiteSoft
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = FieldColor,
@@ -164,9 +183,11 @@ fun TelaFeedDuvida(
                     modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    val podePublicar = usuario.cargo == Cargo.USUARIO || usuario.cargo == Cargo.ADMIN
                     Text(
                         text = if (duvidasDoCurso.isEmpty())
-                            "Ainda não há dúvidas publicadas para o seu curso.\nSeja o primeiro a perguntar!"
+                            if (podePublicar) "Ainda não há dúvidas publicadas para o seu curso.\nSeja o primeiro a perguntar!"
+                            else "Ainda não há dúvidas publicadas para o seu curso."
                         else "Nenhuma dúvida encontrada com esse filtro.",
                         color = GrayText,
                         fontSize = 14.sp
@@ -185,13 +206,16 @@ fun TelaFeedDuvida(
             }
         }
 
-        FloatingActionButton(
-            onClick = onNovaDuvidaClick,
-            containerColor = OrangePrimary,
-            contentColor = Color.White,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 24.dp)
-        ) {
-            Icon(imageVector = Icons.Default.Add, contentDescription = "Nova dúvida")
+        val podePublicar = usuario.cargo == Cargo.USUARIO || usuario.cargo == Cargo.ADMIN
+        if (podePublicar) {
+            FloatingActionButton(
+                onClick = onNovaDuvidaClick,
+                containerColor = OrangePrimary,
+                contentColor = Color.White,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 24.dp)
+            ) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Nova dúvida")
+            }
         }
     }
 }
@@ -201,10 +225,7 @@ fun FeedPostCard(duvida: Duvida, onClick: () -> Unit = {}) {
     val autor = Repositorio.buscarUsuario(duvida.autorId)
     val nomeAutor = autor?.nome ?: "Usuário"
     val cargoAutor = autor?.cargo ?: Cargo.USUARIO
-    val respondidaPorMonitorOuProfessor = duvida.respostas.any { resposta ->
-        val autorResposta = Repositorio.buscarUsuario(resposta.autorId)
-        autorResposta?.cargo == Cargo.MONITOR || autorResposta?.cargo == Cargo.PROFESSOR
-    }
+    val respondidaPorMonitorOuProfessor = duvida.respondidaPorMonitor
 
     Card(
         modifier = Modifier
@@ -229,11 +250,10 @@ fun FeedPostCard(duvida: Duvida, onClick: () -> Unit = {}) {
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = nomeAutor, color = WhiteSoft, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        CargoBadge(cargoAutor)
-                    }
+                    Text(text = nomeAutor, color = WhiteSoft, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    CargoBadge(cargoAutor)
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(text = duvida.disciplina, color = GrayText, fontSize = 13.sp)
                 }
             }
@@ -262,7 +282,7 @@ fun FeedPostCard(duvida: Duvida, onClick: () -> Unit = {}) {
                 }
                 Surface(shape = RoundedCornerShape(50), color = FieldColor) {
                     Text(
-                        text = "${duvida.respostas.size} respostas",
+                        text = "${duvida.respostasCount} respostas",
                         color = WhiteSoft,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,

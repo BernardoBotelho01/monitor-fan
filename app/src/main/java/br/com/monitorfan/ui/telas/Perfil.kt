@@ -23,7 +23,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MenuBook
@@ -81,10 +83,11 @@ import br.com.monitorfan.ui.theme.GrayText
 import br.com.monitorfan.ui.theme.OrangePrimary
 import br.com.monitorfan.ui.theme.WhiteSoft
 import br.com.monitorfan.ui.viewmodel.AlterarSenhaState
+import br.com.monitorfan.ui.viewmodel.DeletarContaState
 import br.com.monitorfan.ui.viewmodel.EditarPerfilState
 import br.com.monitorfan.ui.viewmodel.PerfilViewModel
 import br.com.monitorfan.ui.viewmodel.PerfilViewModelFactory
-import br.com.monitorfan.util.SessaoPrefs
+import br.com.monitorfan.ui.viewmodel.TrocarEmailState
 import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,12 +100,19 @@ fun TelaPerfil(
     val context = LocalContext.current
     val editarState by perfilViewModel.state.collectAsState()
     val alterarSenhaState by perfilViewModel.alterarSenhaState.collectAsState()
+    val deletarContaState by perfilViewModel.deletarContaState.collectAsState()
+    val trocarEmailState by perfilViewModel.trocarEmailState.collectAsState()
 
     var modoEdicao by remember { mutableStateOf(false) }
     var mostrarDialogSenha by remember { mutableStateOf(false) }
+    var mostrarDialogDeletar by remember { mutableStateOf(false) }
+    var mostrarDialogEmail by remember { mutableStateOf(false) }
+    var novoEmailTroca by remember { mutableStateOf("") }
     var senhaAtual by remember { mutableStateOf("") }
     var novaSenha by remember { mutableStateOf("") }
     var confirmarSenha by remember { mutableStateOf("") }
+    var senhaConfirmacaoDelete by remember { mutableStateOf("") }
+    var senhaDeleteVisivel by remember { mutableStateOf(false) }
     var senhaAtualVisivel by remember { mutableStateOf(false) }
     var novaSenhaVisivel by remember { mutableStateOf(false) }
     var confirmarSenhaVisivel by remember { mutableStateOf(false) }
@@ -141,6 +151,16 @@ fun TelaPerfil(
             novaSenha = ""
             confirmarSenha = ""
             perfilViewModel.resetAlterarSenhaState()
+        }
+    }
+
+    LaunchedEffect(deletarContaState) {
+        if (deletarContaState is DeletarContaState.Sucesso) {
+            mostrarDialogDeletar = false
+            senhaConfirmacaoDelete = ""
+            perfilViewModel.resetDeletarContaState()
+            Repositorio.encerrarSessao()
+            onLogout()
         }
     }
 
@@ -375,12 +395,11 @@ fun TelaPerfil(
 
                         OutlinedTextField(
                             value = novoEmail,
-                            onValueChange = {
-                                novoEmail = it
-                                if (editarState is EditarPerfilState.Erro) perfilViewModel.resetState()
-                            },
+                            onValueChange = {},
                             label = { Text("E-mail") },
                             singleLine = true,
+                            readOnly = true,
+                            enabled = false,
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth(),
                             colors = textFieldColors()
@@ -475,9 +494,7 @@ fun TelaPerfil(
                         perfilViewModel.resetAlterarSenhaState()
                         mostrarDialogSenha = true
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(18.dp),
                     border = BorderStroke(1.dp, OrangePrimary),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangePrimary)
@@ -489,10 +506,27 @@ fun TelaPerfil(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                OutlinedButton(
+                    onClick = {
+                        novoEmailTroca = ""
+                        perfilViewModel.resetTrocarEmailState()
+                        mostrarDialogEmail = true
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, OrangePrimary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangePrimary)
+                ) {
+                    Icon(imageVector = Icons.Default.Email, contentDescription = null)
+                    Spacer(modifier = Modifier.padding(horizontal = 6.dp))
+                    Text("Alterar e-mail", fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Button(
                     onClick = {
-                        SessaoPrefs.limpar(context)
-                        Repositorio.encerrarSessao()
+                        perfilViewModel.fazerLogout()
                         onLogout()
                     },
                     modifier = Modifier
@@ -512,9 +546,115 @@ fun TelaPerfil(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        senhaConfirmacaoDelete = ""
+                        senhaDeleteVisivel = false
+                        perfilViewModel.resetDeletarContaState()
+                        mostrarDialogDeletar = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, Color(0xFFFF6B6B)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF6B6B))
+                ) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = null)
+                    Spacer(modifier = Modifier.padding(horizontal = 6.dp))
+                    Text("Deletar conta", fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        if (mostrarDialogEmail) {
+            AlertDialog(
+                onDismissRequest = {
+                    if (trocarEmailState !is TrocarEmailState.Carregando) {
+                        mostrarDialogEmail = false
+                        perfilViewModel.resetTrocarEmailState()
+                    }
+                },
+                title = { Text("Alterar E-mail", color = WhiteSoft, fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (trocarEmailState is TrocarEmailState.Sucesso) {
+                            Text(
+                                text = "Enviamos um link de confirmação para $novoEmailTroca.\n\nClique no link recebido por e-mail para confirmar a troca. Depois, saia da conta e entre novamente — o perfil será atualizado automaticamente.",
+                                color = WhiteSoft,
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp
+                            )
+                        } else {
+                            Text(
+                                text = "E-mail atual: ${usuario.email}",
+                                color = GrayText,
+                                fontSize = 13.sp
+                            )
+                            OutlinedTextField(
+                                value = novoEmailTroca,
+                                onValueChange = {
+                                    novoEmailTroca = it
+                                    if (trocarEmailState is TrocarEmailState.Erro) perfilViewModel.resetTrocarEmailState()
+                                },
+                                label = { Text("Novo e-mail") },
+                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                                singleLine = true,
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = textFieldColors()
+                            )
+                            if (trocarEmailState is TrocarEmailState.Erro) {
+                                Text(
+                                    text = (trocarEmailState as TrocarEmailState.Erro).mensagem,
+                                    color = Color(0xFFFF6B6B),
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    if (trocarEmailState is TrocarEmailState.Sucesso) {
+                        Button(
+                            onClick = {
+                                mostrarDialogEmail = false
+                                perfilViewModel.resetTrocarEmailState()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+                        ) { Text("OK") }
+                    } else {
+                        Button(
+                            onClick = { perfilViewModel.solicitarTrocaEmail(novoEmailTroca) },
+                            enabled = trocarEmailState !is TrocarEmailState.Carregando,
+                            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+                        ) {
+                            if (trocarEmailState is TrocarEmailState.Carregando) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                            } else {
+                                Text("Enviar link")
+                            }
+                        }
+                    }
+                },
+                dismissButton = {
+                    if (trocarEmailState !is TrocarEmailState.Sucesso) {
+                        TextButton(
+                            onClick = {
+                                mostrarDialogEmail = false
+                                perfilViewModel.resetTrocarEmailState()
+                            },
+                            enabled = trocarEmailState !is TrocarEmailState.Carregando
+                        ) { Text("Cancelar", color = GrayText) }
+                    }
+                },
+                containerColor = BluePrimary
+            )
         }
 
         if (mostrarDialogSenha) {
@@ -608,7 +748,7 @@ fun TelaPerfil(
                 confirmButton = {
                     Button(
                         onClick = {
-                            perfilViewModel.alterarSenha(usuario, senhaAtual, novaSenha, confirmarSenha)
+                            perfilViewModel.alterarSenha(senhaAtual, novaSenha, confirmarSenha)
                         },
                         enabled = alterarSenhaState !is AlterarSenhaState.Carregando,
                         colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
@@ -627,6 +767,87 @@ fun TelaPerfil(
                             perfilViewModel.resetAlterarSenhaState()
                         },
                         enabled = alterarSenhaState !is AlterarSenhaState.Carregando
+                    ) {
+                        Text("Cancelar", color = GrayText)
+                    }
+                },
+                containerColor = BluePrimary
+            )
+        }
+
+        if (mostrarDialogDeletar) {
+            AlertDialog(
+                onDismissRequest = {
+                    if (deletarContaState !is DeletarContaState.Carregando) {
+                        mostrarDialogDeletar = false
+                        senhaConfirmacaoDelete = ""
+                        perfilViewModel.resetDeletarContaState()
+                    }
+                },
+                title = {
+                    Text("Deletar conta", color = WhiteSoft, fontWeight = FontWeight.Bold)
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            text = "Esta ação é permanente. Sua conta, dúvidas e respostas serão removidas. Digite sua senha para confirmar.",
+                            color = GrayText,
+                            fontSize = 14.sp
+                        )
+                        OutlinedTextField(
+                            value = senhaConfirmacaoDelete,
+                            onValueChange = {
+                                senhaConfirmacaoDelete = it
+                                if (deletarContaState is DeletarContaState.Erro) perfilViewModel.resetDeletarContaState()
+                            },
+                            label = { Text("Senha") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                            trailingIcon = {
+                                IconButton(onClick = { senhaDeleteVisivel = !senhaDeleteVisivel }) {
+                                    Icon(
+                                        imageVector = if (senhaDeleteVisivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = null
+                                    )
+                                }
+                            },
+                            visualTransformation = if (senhaDeleteVisivel) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = textFieldColors()
+                        )
+                        if (deletarContaState is DeletarContaState.Erro) {
+                            Text(
+                                text = (deletarContaState as DeletarContaState.Erro).mensagem,
+                                color = Color(0xFFFF6B6B),
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            perfilViewModel.deletarConta(senhaConfirmacaoDelete)
+                        },
+                        enabled = deletarContaState !is DeletarContaState.Carregando,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B6B))
+                    ) {
+                        if (deletarContaState is DeletarContaState.Carregando) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                        } else {
+                            Text("Deletar")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            mostrarDialogDeletar = false
+                            senhaConfirmacaoDelete = ""
+                            perfilViewModel.resetDeletarContaState()
+                        },
+                        enabled = deletarContaState !is DeletarContaState.Carregando
                     ) {
                         Text("Cancelar", color = GrayText)
                     }
